@@ -1,0 +1,131 @@
+# Hemkoll – tvättstugan: "Tvätten/Torken är klar" på Sonos + push i mobilen
+# Lägg filen i /config/packages/ och aktivera paket i configuration.yaml:
+#
+#   homeassistant:
+#     packages: !include_dir_named packages
+#
+# BYT UT (sök efter ÄNDRA):
+#   sensor.tvattmaskin_power        -> effektsensorn från Shelly Plug PM vid tvättmaskinen
+#   sensor.torktumlare_power        -> effektsensorn från Shelly Plug PM vid torktumlaren
+#   media_player.sonos_kok          -> Sonos-högtalaren som ska prata
+#   tts.google_translate_sv_se      -> din TTS-entitet (Inställningar → Röstassistenter)
+#   notify.mobile_app_din_telefon   -> din telefon (Home Assistant-appen)
+
+input_boolean:
+  tvatt_pagar:
+    name: Tvätt pågår
+    icon: mdi:washing-machine
+  tork_pagar:
+    name: Tork pågår
+    icon: mdi:tumble-dryer
+
+script:
+  # Gemensamt meddelande: push alltid, Sonos bara dagtid och när någon är hemma
+  hemkoll_tvattstuga_meddela:
+    alias: "Hemkoll: meddela från tvättstugan"
+    mode: queued
+    fields:
+      titel:
+        description: Rubrik för pushnotisen
+      meddelande:
+        description: Det som sägs på Sonos och står i notisen
+    sequence:
+      - action: notify.mobile_app_din_telefon # ÄNDRA
+        data:
+          title: "{{ titel }}"
+          message: "{{ meddelande }}"
+      - if:
+          - condition: time
+            after: "08:00:00"
+            before: "21:30:00"
+          - condition: numeric_state
+            entity_id: zone.home
+            above: 0
+        then:
+          - action: media_player.volume_set
+            target:
+              entity_id: media_player.sonos_kok # ÄNDRA
+            data:
+              volume_level: 0.35
+          - action: tts.speak
+            target:
+              entity_id: tts.google_translate_sv_se # ÄNDRA
+            data:
+              media_player_entity_id: media_player.sonos_kok # ÄNDRA
+              message: "{{ meddelande }}"
+              cache: true
+
+automation:
+  # ---------- Tvättmaskin ----------
+  - id: hemkoll_tvatt_startad
+    alias: "Hemkoll: tvätt startad"
+    mode: single
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.tvattmaskin_power # ÄNDRA
+        above: 50
+        for: "00:01:00"
+    actions:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.tvatt_pagar
+
+  - id: hemkoll_tvatt_klar
+    alias: "Hemkoll: tvätten är klar"
+    mode: single
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.tvattmaskin_power # ÄNDRA
+        below: 5
+        for: "00:03:00" # öka om maskinen pausar länge mitt i programmet (t.ex. blötläggning)
+    conditions:
+      - condition: state
+        entity_id: input_boolean.tvatt_pagar
+        state: "on"
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.tvatt_pagar
+      - action: script.hemkoll_tvattstuga_meddela
+        data:
+          titel: "Tvätten är klar 🫧"
+          meddelande: "Tvätten är klar!"
+
+  # ---------- Torktumlare ----------
+  # Torktumlare har ofta skrynkelskydd: trumman snurrar till några sekunder
+  # med några minuters mellanrum efter att programmet är klart (cirka 100–200 W).
+  # Därför: "klar" = under 30 W i 2 minuter. Om du får notisen för tidigt
+  # (under avsvalningen), höj tiden till 00:05:00.
+  - id: hemkoll_tork_startad
+    alias: "Hemkoll: tork startad"
+    mode: single
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.torktumlare_power # ÄNDRA
+        above: 300 # över skrynkelskyddets snurr, så att det inte räknas som en ny start
+        for: "00:02:00"
+    actions:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.tork_pagar
+
+  - id: hemkoll_tork_klar
+    alias: "Hemkoll: torken är klar"
+    mode: single
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.torktumlare_power # ÄNDRA
+        below: 30
+        for: "00:02:00"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.tork_pagar
+        state: "on"
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.tork_pagar
+      - action: script.hemkoll_tvattstuga_meddela
+        data:
+          titel: "Torken är klar 🌀"
+          meddelande: "Torktumlaren är klar!"
