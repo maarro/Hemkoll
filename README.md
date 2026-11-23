@@ -35,6 +35,19 @@ npm run build
 Öppna `http://homeassistant.local:8123/local/hemkoll/index.html` och lägg till på hemskärmen.
 Då behöver du bara klistra in token första gången, och adressen fylls i automatiskt.
 
+## Flikarna
+
+- **Hem:** effekt och elpris, *Just nu* (olåst dörr, tvätt eller tork klar, dyr eller billig el), fyra scenknappar och dina favoriter.
+- **Rum:** rummen från Home Assistant (Inställningar → Områden). Tryck på ett rum för att se och styra allt där. Det som HA har markerat som dolt, inställning eller diagnostik visas inte.
+- **Energi:** effekt, kostnad idag, tvätt och tork, elpris med billigaste timmen och vad som drar mest.
+- **Händelser:** tvätt, tork, lås, larm och dörrar de senaste två dygnen (från HA:s logbok).
+
+**Favoriter:** håll inne på en enhet för att fästa den på startsidan, eller tryck på stjärnan i kontrollvyn. Favoriterna sparas per mobil.
+
+**Scener:** ställs in i `config.scenes` i `src/config.ts`. Varje steg är `on`, `off`, `play`, `pause` eller `lock` på en lista entiteter (eller `'allOn'` = allt som är på). Entiteter som inte finns hoppas över.
+
+**Lås:** låsa med ett tryck. Låsa upp kräver ett andra tryck inom 4 sekunder.
+
 ## Styra enheter
 
 Tryck på en högtalare, TV eller konsol under **Enheter** för att öppna kontrollvyn:

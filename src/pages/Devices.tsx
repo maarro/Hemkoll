@@ -1,42 +1,30 @@
-import { useState } from 'react'
 import { useHass } from '../ha/HassProvider'
-import { computers, mediaKind, mediaPlayers, plugs } from '../ha/selectors'
-import { ComputerTile, MediaTile, PlugTile } from '../components/Tiles'
-import { MediaDetail } from '../components/MediaDetail'
+import { computers, mediaKind, mediaPlayers, plugs, domainOf } from '../ha/selectors'
+import { EntityTile } from '../components/EntityTile'
 
+/** Alla enheter sorterade på typ – används när rum saknas eller via "Visa alla enheter". */
 export function Devices() {
-  const { entities } = useHass()
-  const [open, setOpen] = useState<string | null>(null)
-  const p = plugs(entities)
-  const m = mediaPlayers(entities)
+  const { entities, noise } = useHass()
+  const ok = (id: string) => !noise.has(id)
+  const p = plugs(entities).filter((e) => ok(e.entity_id))
+  const m = mediaPlayers(entities).filter((e) => ok(e.entity_id))
   const speakers = m.filter((e) => mediaKind(e) === 'speaker')
   const screens = m.filter((e) => mediaKind(e) !== 'speaker')
   const c = computers(entities)
-  const tiles = (list: typeof m) => list.map((e) => <MediaTile key={e.entity_id} entity={e} onOpen={() => setOpen(e.entity_id)} />)
-
+  const locks = Object.values(entities).filter((e) => domainOf(e.entity_id) === 'lock' && ok(e.entity_id))
+  const section = (title: string, list: typeof m, empty: string) => (
+    <section className="card">
+      <h2>{title}</h2>
+      {list.length ? list.map((e) => <EntityTile key={e.entity_id} entity={e} />) : <p className="muted">{empty}</p>}
+    </section>
+  )
   return (
     <div className="stack">
-      <section className="card">
-        <h2>Högtalare</h2>
-        {speakers.length ? tiles(speakers) : <p className="muted">Inga högtalare hittade.</p>}
-      </section>
-      <section className="card">
-        <h2>TV &amp; spel</h2>
-        {screens.length ? tiles(screens) : <p className="muted">Inga TV-apparater hittade.</p>}
-      </section>
-      <section className="card">
-        <h2>Uttag</h2>
-        {p.length ? p.map((e) => <PlugTile key={e.entity_id} entity={e} />) : <p className="muted">Inga uttag hittade.</p>}
-      </section>
-      <section className="card">
-        <h2>Datorer</h2>
-        {c.length ? (
-          c.map((e) => <ComputerTile key={e.entity_id} entity={e} />)
-        ) : (
-          <p className="muted">Lägg till Wake-on-LAN i Home Assistant för att väcka datorerna härifrån.</p>
-        )}
-      </section>
-      {open && <MediaDetail entityId={open} onClose={() => setOpen(null)} />}
+      {locks.length > 0 && section('Lås', locks, '')}
+      {section('Högtalare', speakers, 'Inga högtalare hittade.')}
+      {section('TV & spel', screens, 'Inga TV-apparater hittade.')}
+      {section('Uttag', p, 'Inga uttag hittade.')}
+      {section('Datorer', c, 'Lägg till Wake-on-LAN i Home Assistant för att väcka datorerna härifrån.')}
     </div>
   )
 }

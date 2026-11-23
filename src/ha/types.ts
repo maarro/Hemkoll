@@ -9,7 +9,28 @@ export interface PricePoint {
   price: number // kr/kWh
 }
 
+export interface Area {
+  id: string
+  name: string
+  icon?: string
+}
+
+export interface LogEvent {
+  when: number // ms
+  entity_id: string
+  state: string
+  name: string
+}
+
 export interface Hass {
+  /** Rum från Home Assistant (area registry). Tom lista om inga rum finns. */
+  areas: Area[]
+  /** entity_id -> area_id. Entiteter som är dolda eller diagnostik saknas här och i ui:t. */
+  areaOf: Record<string, string>
+  /** Entiteter som HA markerat som dolda, inställningar eller diagnostik. */
+  noise: Set<string>
+  /** Logbok (händelser) sedan start, för valda entiteter. */
+  getLogbook: (start: Date, entityIds: string[]) => Promise<LogEvent[]>
   status: Status
   /** Adress till HA, för bilder (entity_picture). Tom i demoläge. */
   baseUrl: string

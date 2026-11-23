@@ -27,8 +27,6 @@ export const config = {
    */
   computers: [] as string[],
 
-  /** Det som stängs av med "Stäng av allt"-knappen. Tom = alla uttag + mediaspelare. */
-  leaveHomeOff: [] as string[],
 
   /**
    * Mediaspelare: typ styr vilken kontrollvy som visas.
@@ -54,9 +52,63 @@ export const config = {
    */
   consolePower: {} as Record<string, string>,
 
+  /**
+   * Scener på startsidan. Varje steg gör något med en lista entiteter.
+   * do: 'on' | 'off' | 'play' | 'pause' | 'lock'. targets: entity_id:n, eller
+   * 'allOn' = alla uttag och mediaspelare som är på just nu.
+   * Entiteter som inte finns hoppas över, så scenerna går att köra direkt.
+   */
+  scenes: [
+    {
+      id: 'natt',
+      name: 'God natt',
+      icon: '🌙',
+      steps: [
+        { do: 'off', targets: ['switch.tv_bank', 'switch.deltaco_vardagsrum', 'media_player.apple_tv', 'media_player.google_tv', 'media_player.sonos_vardagsrum', 'media_player.sonos_kok'] },
+        { do: 'lock', targets: ['lock.ytterdorr'] },
+      ],
+    },
+    {
+      id: 'borta',
+      name: 'Lämna hemmet',
+      icon: '🚪',
+      steps: [
+        { do: 'off', targets: 'allOn' },
+        { do: 'lock', targets: ['lock.ytterdorr'] },
+      ],
+    },
+    {
+      id: 'film',
+      name: 'Filmkväll',
+      icon: '🍿',
+      steps: [
+        { do: 'on', targets: ['switch.tv_bank', 'media_player.apple_tv'] },
+        { do: 'pause', targets: ['media_player.sonos_vardagsrum', 'media_player.sonos_kok'] },
+        { do: 'off', targets: ['switch.deltaco_vardagsrum'] },
+      ],
+    },
+    {
+      id: 'hemma',
+      name: 'Hemma igen',
+      icon: '🏡',
+      steps: [
+        { do: 'on', targets: ['switch.deltaco_vardagsrum', 'switch.ikea_hall'] },
+        { do: 'play', targets: ['media_player.sonos_kok'], source: 'P3' },
+      ],
+    },
+  ] as SceneDef[],
+
   /** Entiteter som aldrig ska visas (t.ex. kylskåpets uttag). */
   hidden: [] as string[],
 
   /** Manuell koppling uttag -> effektsensor, om automatiken inte hittar den. */
   powerFor: {} as Record<string, string>,
 }
+
+export type SceneStep = {
+  do: 'on' | 'off' | 'play' | 'pause' | 'lock'
+  targets: string[] | 'allOn'
+  /** Vid play: spela denna källa/favorit (t.ex. 'P3'). */
+  source?: string
+}
+export type SceneDef = { id: string; name: string; icon: string; steps: SceneStep[] }

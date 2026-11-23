@@ -4,6 +4,7 @@ import { useHass } from '../ha/HassProvider'
 import { groupable, mediaKind, nameOf, remoteFor } from '../ha/selectors'
 import type { HassEntity } from '../ha/types'
 import { stateSv } from './Tiles'
+import { toggleFavorite, useFavorites } from '../ui/favorites'
 
 const CMD = {
   apple: { up: 'up', down: 'down', left: 'left', right: 'right', ok: 'select', back: 'menu', home: 'home', volUp: 'volume_up', volDown: 'volume_down' },
@@ -17,6 +18,7 @@ export function MediaDetail({ entityId, onClose }: { entityId: string; onClose: 
   const { entities, callService, baseUrl } = useHass()
   const e = entities[entityId] as HassEntity | undefined
   const [vol, setVol] = useState<number>()
+  const fav = useFavorites().includes(entityId)
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && onClose()
@@ -58,9 +60,19 @@ export function MediaDetail({ entityId, onClose }: { entityId: string; onClose: 
               {a.app_name ? ` · ${a.app_name}` : a.source ? ` · ${a.source}` : ''}
             </div>
           </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Stäng">
-            ✕
-          </button>
+          <div className="row tight">
+            <button
+              className={`icon-btn star ${fav ? 'on' : ''}`}
+              onClick={() => toggleFavorite(entityId)}
+              aria-label={fav ? 'Ta bort från favoriter' : 'Fäst på startsidan'}
+              aria-pressed={fav}
+            >
+              {fav ? '★' : '☆'}
+            </button>
+            <button className="icon-btn" onClick={onClose} aria-label="Stäng">
+              ✕
+            </button>
+          </div>
         </header>
 
         {/* Spelas nu */}

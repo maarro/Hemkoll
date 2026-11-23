@@ -6,8 +6,8 @@ import {
   subscribeEntities,
   type Connection,
 } from 'home-assistant-js-websocket'
-import type { Hass, HassEntities, PricePoint, Settings, Status } from './types'
-import { initialMockEntities, mockPrices, mockService, tick } from './mock'
+import type { Area, Hass, HassEntities, LogEvent, PricePoint, Settings, Status } from './types'
+import { initialMockEntities, mockAreaOf, mockAreas, mockLogbook, mockPrices, mockService, tick } from './mock'
 
 const Ctx = createContext<Hass | null>(null)
 
@@ -22,6 +22,9 @@ export function HassProvider({ settings, children }: { settings: Settings; child
   const [error, setError] = useState<string>()
   const [entities, setEntities] = useState<HassEntities>({})
   const conn = useRef<Connection | null>(null)
+  const [areas, setAreas] = useState<Area[]>([])
+  const [areaOf, setAreaOf] = useState<Record<string, string>>({})
+  const [noise, setNoise] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -31,6 +34,9 @@ export function HassProvider({ settings, children }: { settings: Settings; child
     if (settings.demo) {
       setStatus('demo')
       setEntities(initialMockEntities())
+      setAreas(mockAreas)
+      setAreaOf(mockAreaOf)
+      setNoise(new Set())
       timer = setInterval(() => setEntities((e) => tick(e)), 3000)
       return () => clearInterval(timer)
     }
@@ -48,6 +54,16 @@ export function HassProvider({ settings, children }: { settings: Settings; child
         if (cancelled) return c.close()
         conn.current = c
         unsub = subscribeEntities(c, (ents) => setEntities(ents))
+        loadRegistries(c)
+          .then((r) => {
+            if (cancelled) return
+            setAreas(r.areas)
+            setAreaOf(r.areaOf)
+            setNoise(r.noise)
+          })
+          .catch(() => {
+            /* utan rum fungerar appen ändå – visar allt under Enheter */
+          })
         c.addEventListener('ready', () => setStatus('connected'))
         c.addEventListener('disconnected', () => setStatus('connecting'))
         setStatus('connected')
@@ -101,7 +117,77 @@ export function HassProvider({ settings, children }: { settings: Settings; child
     return (homes[0] ?? []).map((p) => ({ start: p.start_time, price: p.price }))
   }, [settings.demo])
 
-  return (
-    <Ctx.Provider value={{ status, error, entities, callService, getPrices, baseUrl: settings.demo ? '' : settings.url.replace(/\/$/, '') }}>{children}</Ctx.Provider>
+  /** Händelser från HA:s logbok. */
+  const getLogbook = useCallback(
+    async (start: Date, entityIds: string[]): Promise<LogEvent[]> => {
+      if (settings.demo) return mockLogbook(start)
+      if (!conn.current || entityIds.length === 0) return []
+      const rows = await conn.current.sendMessagePromise<
+        { when: number; entity_id?: string; state?: string; name?: string }[]
+      >({ type: 'logbook/get_events', start_time: start.toISOString(), entity_ids: entityIds })
+      return rows
+        .filter((r) => r.entity_id && r.state)
+        .map((r) => ({
+          when: r.when * 1000,
+          entity_id: r.entity_id as string,
+          state: r.state as string,
+          name: r.name ?? (r.entity_id as string),
+        }))
+    },
+    [settings.demo],
   )
+
+  return (
+    <Ctx.Provider
+      value={{
+        status,
+        error,
+        entities,
+        callService,
+        getPrices,
+        getLogbook,
+        areas,
+        areaOf,
+        noise,
+        baseUrl: settings.demo ? '' : settings.url.replace(/\/$/, ''),
+      }}
+    >
+      {children}
+    </Ctx.Provider>
+  )
+}
+
+type RegEntity = {
+  entity_id?: string
+  ei?: string
+  area_id?: string | null
+  ai?: string | null
+  device_id?: string | null
+  di?: string | null
+  entity_category?: string | null
+  ec?: number | null
+  hidden_by?: string | null
+  hb?: boolean
+}
+
+/** Rum och dolda entiteter från HA:s register. Enhetens rum gäller om entiteten saknar eget. */
+async function loadRegistries(c: Connection) {
+  const [areaList, devices, entityList] = await Promise.all([
+    c.sendMessagePromise<{ area_id: string; name: string; icon?: string | null }[]>({ type: 'config/area_registry/list' }),
+    c.sendMessagePromise<{ id: string; area_id: string | null }[]>({ type: 'config/device_registry/list' }),
+    c.sendMessagePromise<RegEntity[]>({ type: 'config/entity_registry/list' }),
+  ])
+  const deviceArea = new Map(devices.map((d) => [d.id, d.area_id]))
+  const areaOf: Record<string, string> = {}
+  const noise = new Set<string>()
+  for (const e of entityList) {
+    const id = e.entity_id ?? e.ei
+    if (!id) continue
+    if (e.entity_category || e.ec != null || e.hidden_by || e.hb) noise.add(id)
+    const dev = e.device_id ?? e.di
+    const area = e.area_id ?? e.ai ?? (dev ? deviceArea.get(dev) : null)
+    if (area) areaOf[id] = area
+  }
+  const areas = areaList.map((a) => ({ id: a.area_id, name: a.name })).sort((a, b) => a.name.localeCompare(b.name, 'sv'))
+  return { areas, areaOf, noise }
 }

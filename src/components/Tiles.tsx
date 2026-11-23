@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useHass } from '../ha/HassProvider'
 import { mediaKind, nameOf, num, powerFor } from '../ha/selectors'
 import { config } from '../config'
@@ -112,6 +113,50 @@ export function MediaTile({ entity, onOpen }: { entity: HassEntity; onOpen?: () 
         )}
         <span className="chev" aria-hidden>›</span>
       </div>
+    </div>
+  )
+}
+
+const lockSv: Record<string, string> = {
+  locked: 'Låst',
+  unlocked: 'Olåst',
+  locking: 'Låser…',
+  unlocking: 'Låser upp…',
+  jammed: 'Fastnat!',
+  open: 'Öppen',
+  unavailable: 'Ej tillgänglig',
+}
+
+/** Lås: låsa med ett tryck, låsa upp kräver ett andra tryck inom 4 sekunder. */
+export function LockTile({ entity }: { entity: HassEntity }) {
+  const { callService } = useHass()
+  const [armed, setArmed] = useState(false)
+  const locked = entity.state === 'locked'
+  useEffect(() => {
+    if (!armed) return
+    const t = setTimeout(() => setArmed(false), 4000)
+    return () => clearTimeout(t)
+  }, [armed])
+
+  const target = { entity_id: entity.entity_id }
+  return (
+    <div className={`tile ${!locked ? 'warn' : ''}`}>
+      <div className="tile-main">
+        <div className="tile-name">{locked ? '🔒' : '🔓'} {nameOf(entity)}</div>
+        <div className="muted small">{lockSv[entity.state] ?? entity.state}</div>
+      </div>
+      {locked ? (
+        <button
+          className={`btn small ${armed ? 'danger' : ''}`}
+          onClick={() => (armed ? (setArmed(false), callService('lock', 'unlock', {}, target)) : setArmed(true))}
+        >
+          {armed ? 'Tryck igen' : 'Lås upp'}
+        </button>
+      ) : (
+        <button className="btn small primary" onClick={() => callService('lock', 'lock', {}, target)}>
+          Lås
+        </button>
+      )}
     </div>
   )
 }

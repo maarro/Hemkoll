@@ -1,50 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useHass } from '../ha/HassProvider'
-import type { PricePoint } from '../ha/types'
+import { useMemo, useState } from 'react'
+import { priceStats, usePrices } from '../ha/usePrices'
 
 const fmt = (n: number) => n.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const hhmm = (iso: string) => new Date(iso).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
 
 /** Dagens elpris som stapeldiagram. Nuvarande period markerad, billigaste timmen utpekad. */
 export function PriceChart() {
-  const { getPrices, status } = useHass()
-  const [prices, setPrices] = useState<PricePoint[]>([])
+  const { prices, failed } = usePrices()
   const [hover, setHover] = useState<number | null>(null)
-  const [failed, setFailed] = useState(false)
-
-  useEffect(() => {
-    let alive = true
-    const load = () =>
-      getPrices()
-        .then((p) => alive && (setPrices(p), setFailed(false)))
-        .catch(() => alive && setFailed(true))
-    if (status === 'connected' || status === 'demo') load()
-    const t = setInterval(load, 15 * 60_000)
-    return () => {
-      alive = false
-      clearInterval(t)
-    }
-  }, [getPrices, status])
-
-  const stats = useMemo(() => {
-    if (!prices.length) return null
-    const nowT = Date.now()
-    const step = prices.length > 1 ? new Date(prices[1].start).getTime() - new Date(prices[0].start).getTime() : 3600_000
-    const nowIdx = prices.findIndex((p) => {
-      const s = new Date(p.start).getTime()
-      return nowT >= s && nowT < s + step
-    })
-    const max = Math.max(...prices.map((p) => p.price))
-    // Billigaste sammanhängande timmen framåt i tiden
-    const per = Math.max(1, Math.round(3600_000 / step))
-    let best = -1
-    let bestAvg = Infinity
-    for (let i = Math.max(0, nowIdx); i + per <= prices.length; i++) {
-      const avg = prices.slice(i, i + per).reduce((a, p) => a + p.price, 0) / per
-      if (avg < bestAvg) (bestAvg = avg), (best = i)
-    }
-    return { nowIdx, max, best, bestAvg, per }
-  }, [prices])
+  const stats = useMemo(() => priceStats(prices, 1), [prices])
 
   if (failed) return <p className="muted">Kunde inte hämta elpriser. Är Tibber-integrationen installerad i Home Assistant?</p>
   if (!stats) return <p className="muted">Hämtar elpriser…</p>

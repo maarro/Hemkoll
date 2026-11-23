@@ -1,6 +1,6 @@
 // Demoläge: låtsas-Home Assistant med dina prylar, så att appen går att
 // utveckla och visa innan hårdvaran är på plats.
-import type { HassEntities, HassEntity, PricePoint } from './types'
+import type { Area, HassEntities, HassEntity, LogEvent, PricePoint } from './types'
 
 const now = () => new Date().toISOString()
 
@@ -91,6 +91,9 @@ export function initialMockEntities(): HassEntities {
     ent('media_player.google_home_kok', 'idle', { friendly_name: 'Google Home Kök', volume_level: 0.4 }),
     ent('media_player.playstation_5', 'on', { friendly_name: 'PlayStation 5', media_title: 'EA Sports FC 26', app_name: 'Spelar' }),
 
+    // Lås
+    ent('lock.ytterdorr', 'unlocked', { friendly_name: 'Ytterdörren' }),
+
     // Datorer (Wake-on-LAN)
     ent('switch.dator_kontor', 'on', { friendly_name: 'Dator kontor' }),
     ent('switch.mac_marcus', 'off', { friendly_name: 'Mac Marcus' }),
@@ -166,6 +169,8 @@ export function mockService(
     const attributes = { ...e.attributes }
     if (service === 'turn_on') state = e.entity_id.startsWith('media_player') ? 'idle' : 'on'
     if (service === 'turn_off') state = 'off'
+    if (domain === 'lock' && service === 'lock') state = 'locked'
+    if (domain === 'lock' && service === 'unlock') state = 'unlocked'
     if (service === 'toggle') state = e.state === 'off' ? 'on' : 'off'
     if (service === 'media_play_pause') state = e.state === 'playing' ? 'paused' : 'playing'
     if (service === 'volume_set') attributes.volume_level = data.volume_level
@@ -202,4 +207,50 @@ export function mockService(
     next[id] = { ...next[id], ...{ state, attributes: { ...next[id].attributes, ...attributes } }, last_changed: now(), last_updated: now() }
   }
   return next
+}
+
+export const mockAreas: Area[] = [
+  { id: 'vardagsrum', name: 'Vardagsrum', icon: '🛋️' },
+  { id: 'kok', name: 'Kök', icon: '🍳' },
+  { id: 'sovrum', name: 'Sovrum', icon: '🛏️' },
+  { id: 'kontor', name: 'Kontor', icon: '💻' },
+  { id: 'tvattstuga', name: 'Tvättstuga', icon: '🧺' },
+  { id: 'hall', name: 'Hall', icon: '🚪' },
+]
+
+export const mockAreaOf: Record<string, string> = {
+  'switch.tv_bank': 'vardagsrum',
+  'switch.deltaco_vardagsrum': 'vardagsrum',
+  'media_player.sonos_vardagsrum': 'vardagsrum',
+  'media_player.apple_tv': 'vardagsrum',
+  'media_player.playstation_5': 'vardagsrum',
+  'media_player.sonos_kok': 'kok',
+  'media_player.google_home_kok': 'kok',
+  'switch.kaffebryggare': 'kok',
+  'media_player.sonos_sovrum': 'sovrum',
+  'media_player.google_tv': 'sovrum',
+  'switch.dator_kontor': 'kontor',
+  'switch.mac_marcus': 'kontor',
+  'sensor.tvattmaskin_power': 'tvattstuga',
+  'sensor.torktumlare_power': 'tvattstuga',
+  'switch.ikea_hall': 'hall',
+  'lock.ytterdorr': 'hall',
+}
+
+/** Påhittad logbok för senaste dygnet. */
+export function mockLogbook(start: Date): LogEvent[] {
+  const now = Date.now()
+  const ago = (min: number) => now - min * 60_000
+  const list: LogEvent[] = [
+    { when: ago(12), entity_id: 'lock.ytterdorr', state: 'unlocked', name: 'Ytterdörren' },
+    { when: ago(38), entity_id: 'input_boolean.tvatt_pagar', state: 'on', name: 'Tvätt pågår' },
+    { when: ago(95), entity_id: 'input_boolean.tork_pagar', state: 'off', name: 'Tork pågår' },
+    { when: ago(170), entity_id: 'input_boolean.tork_pagar', state: 'on', name: 'Tork pågår' },
+    { when: ago(185), entity_id: 'input_boolean.tvatt_pagar', state: 'off', name: 'Tvätt pågår' },
+    { when: ago(290), entity_id: 'input_boolean.tvatt_pagar', state: 'on', name: 'Tvätt pågår' },
+    { when: ago(540), entity_id: 'lock.ytterdorr', state: 'locked', name: 'Ytterdörren' },
+    { when: ago(610), entity_id: 'lock.ytterdorr', state: 'unlocked', name: 'Ytterdörren' },
+    { when: ago(900), entity_id: 'lock.ytterdorr', state: 'locked', name: 'Ytterdörren' },
+  ]
+  return list.filter((e) => e.when >= start.getTime())
 }

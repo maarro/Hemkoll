@@ -73,10 +73,6 @@ export function consumers(ents: HassEntities) {
     .sort((a, b) => b.watts - a.watts)
 }
 
-export function leaveHomeTargets(ents: HassEntities) {
-  if (config.leaveHomeOff.length) return config.leaveHomeOff
-  return [...plugs(ents), ...mediaPlayers(ents)].filter((e) => e.state !== 'off').map((e) => e.entity_id)
-}
 
 export type MediaKind = 'speaker' | 'tv' | 'console'
 

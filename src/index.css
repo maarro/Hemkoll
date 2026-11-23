@@ -135,3 +135,51 @@ h2 { font-size: 0.95rem; font-weight: 600; margin-bottom: 12px; }
 .note { background: var(--card-2); border-radius: 12px; padding: 12px; color: var(--muted); margin: 0; line-height: 1.45; }
 .note code { color: var(--text); }
 .power { margin-top: 4px; }
+
+/* --- Startsidan --- */
+button.card { text-align: left; width: 100%; color: inherit; font: inherit; cursor: pointer; }
+.strip { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; }
+.strip strong { font-size: 1.05rem; }
+
+.scenes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.scene { display: flex; align-items: center; gap: 10px; padding: 16px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); font-weight: 650; font-size: 0.98rem; text-align: left; transition: transform .08s, background .15s; }
+.scene:active { transform: scale(0.97); background: var(--card-2); }
+.scene.busy { border-color: var(--accent); background: var(--accent-soft); }
+.scene:disabled:not(.busy) { opacity: .6; }
+.scene-icon { font-size: 1.5rem; line-height: 1; }
+
+.alerts { display: flex; flex-direction: column; gap: 8px; }
+.alert { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); font-size: 0.92rem; }
+.alert.warn { border-color: rgba(240, 106, 94, 0.45); background: rgba(240, 106, 94, 0.08); }
+.alert.good { border-color: rgba(76, 195, 138, 0.4); background: var(--good-soft); }
+.alert-text { flex: 1; min-width: 0; }
+
+.tile-wrap { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; touch-action: manipulation; position: relative; }
+.tile-wrap + .tile-wrap { border-top: 1px solid var(--line); }
+.tile-wrap .tile { border-top: none !important; border-radius: 12px; }
+.tile-wrap.fav .tile-name::after { content: ' ★'; color: #f2c14e; font-size: 0.8em; }
+.tile.warn .tile-name { color: var(--danger); }
+
+/* --- Rum --- */
+.rooms { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.room-card { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); text-align: left; min-height: 112px; }
+.room-card:active { transform: scale(0.98); }
+.room-card.on { border-color: rgba(95, 179, 249, 0.5); background: linear-gradient(160deg, var(--accent-soft), var(--card) 70%); }
+.room-icon { font-size: 1.7rem; margin-bottom: 4px; }
+.room-name { font-weight: 650; }
+.btn.back { text-align: left; }
+.center { text-align: center; }
+
+/* --- Händelser --- */
+.events { list-style: none; margin: 0; padding: 0; }
+.event-day { font-size: 0.78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; font-weight: 600; }
+.events li:first-child .event-day { margin-top: 0; }
+.event { display: grid; grid-template-columns: 46px 24px 1fr; align-items: center; gap: 6px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 0.93rem; }
+.event-time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+.event.warn span:last-child { color: var(--danger); }
+
+/* --- Övrigt --- */
+.toast { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 99px; font-size: 0.9rem; font-weight: 600; z-index: 40; box-shadow: 0 6px 24px rgba(0,0,0,.35); animation: up .18s ease-out; max-width: calc(100% - 32px); text-align: center; }
+.row.tight { gap: 6px; margin: 0; }
+.icon-btn.star.on { color: #f2c14e; border-color: rgba(242, 193, 78, .5); }
+.tabs button { font-size: 0.68rem; padding: 6px 2px; }

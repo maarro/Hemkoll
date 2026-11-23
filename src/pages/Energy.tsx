@@ -1,12 +1,12 @@
-import { useState } from 'react'
 import { config } from '../config'
 import { useHass } from '../ha/HassProvider'
-import { consumers, leaveHomeTargets, nameOf, num, tibber } from '../ha/selectors'
+import { consumers, nameOf, num, tibber } from '../ha/selectors'
 import { PriceChart } from '../components/PriceChart'
 import { watts } from '../components/Tiles'
 
-export function Overview() {
-  const { entities, callService } = useHass()
+/** Energi: effekt, kostnad, elpris och vad som drar mest. */
+export function Energy() {
+  const { entities } = useHass()
   const t = tibber(entities)
   const power = num(t.power)
   const price = num(t.price)
@@ -16,8 +16,6 @@ export function Overview() {
 
   const appliances = config.appliances.filter((a) => entities[a.power])
 
-  const [confirm, setConfirm] = useState(false)
-  const targets = leaveHomeTargets(entities)
 
   return (
     <div className="stack">
@@ -89,32 +87,6 @@ export function Overview() {
         </ul>
       </section>
 
-      <section className="card">
-        <h2>Lämna hemmet</h2>
-        <p className="muted small">
-          Stänger av {targets.length} {targets.length === 1 ? 'sak' : 'saker'} som är på: uttag, TV-apparater och högtalare.
-        </p>
-        {!confirm ? (
-          <button className="btn danger wide" disabled={!targets.length} onClick={() => setConfirm(true)}>
-            Stäng av allt
-          </button>
-        ) : (
-          <div className="row">
-            <button className="btn wide" onClick={() => setConfirm(false)}>
-              Avbryt
-            </button>
-            <button
-              className="btn danger wide"
-              onClick={async () => {
-                await callService('homeassistant', 'turn_off', {}, { entity_id: targets })
-                setConfirm(false)
-              }}
-            >
-              Ja, stäng av
-            </button>
-          </div>
-        )}
-      </section>
     </div>
   )
 }
