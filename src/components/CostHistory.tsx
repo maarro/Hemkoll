@@ -10,7 +10,7 @@ export function CostHistory() {
   const [hover, setHover] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!id || (status !== 'connected' && status !== 'demo')) return
+    if (status !== 'connected' && status !== 'demo') return
     let alive = true
     getDaily(id, 7)
       .then((r) => alive && setRows(r))
@@ -20,7 +20,6 @@ export function CostHistory() {
     }
   }, [getDaily, id, status])
 
-  if (!id) return null
   if (!rows) return <p className="muted">Hämtar historik…</p>
   if (!rows.length) return <p className="muted">Ingen historik ännu. Den fylls på dag för dag.</p>
 

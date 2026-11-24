@@ -156,23 +156,36 @@ export function HassProvider({ settings, children }: { settings: Settings; child
     [settings.demo],
   )
 
+  /**
+   * Kostnad per dag. Tibber lägger in egen statistik (tibber:energy_totalcost_<hem>) som
+   * finns även utan Pulse – den används i första hand. Annars dagens maxvärde från en
+   * ackumulerande kostnadssensor.
+   */
   const getDaily = useCallback(
-    async (statisticId: string, days: number) => {
+    async (fallbackId: string, days: number) => {
       if (settings.demo) return mockDailyCost(days)
-      if (!conn.current || !statisticId) return []
+      const c = conn.current
+      if (!c) return []
       const start = new Date()
       start.setHours(0, 0, 0, 0)
       start.setDate(start.getDate() - (days - 1))
-      const res = await conn.current.sendMessagePromise<Record<string, { start: number; max: number | null }[]>>({
+      type Row = { start: number | string; max?: number | null; change?: number | null }
+      const ids = await c
+        .sendMessagePromise<{ statistic_id: string }[]>({ type: 'recorder/list_statistic_ids', statistic_type: 'sum' })
+        .catch(() => [])
+      const tibberCost = ids.map((i) => i.statistic_id).find((i) => i.startsWith('tibber:energy_totalcost'))
+      const id = tibberCost ?? fallbackId
+      if (!id) return []
+      const res = await c.sendMessagePromise<Record<string, Row[]>>({
         type: 'recorder/statistics_during_period',
         start_time: start.toISOString(),
-        statistic_ids: [statisticId],
+        statistic_ids: [id],
         period: 'day',
-        types: ['max'],
+        types: [tibberCost ? 'change' : 'max'],
       })
-      return (res[statisticId] ?? [])
-        .filter((r) => r.max != null)
-        .map((r) => ({ day: typeof r.start === 'number' ? r.start : new Date(r.start).getTime(), cost: r.max as number }))
+      return (res[id] ?? [])
+        .map((r) => ({ day: typeof r.start === 'number' ? r.start : new Date(r.start).getTime(), cost: (tibberCost ? r.change : r.max) ?? null }))
+        .filter((r): r is { day: number; cost: number } => r.cost != null)
     },
     [settings.demo],
   )

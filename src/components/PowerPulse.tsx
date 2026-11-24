@@ -12,6 +12,7 @@ export function PowerPulse({ onOpen }: { onOpen: () => void }) {
   const t = tibber(entities)
   const power = num(t.power)
   const cost = num(t.cost)
+  const monthCost = num(t.monthCost)
   const { prices } = usePrices()
   const st = priceStats(prices, 1)
   const [pts, setPts] = useState<[number, number][]>([])
@@ -40,7 +41,22 @@ export function PowerPulse({ onOpen }: { onOpen: () => void }) {
 
   const level = st?.now === undefined ? null : st.now > st.avg * 1.35 ? 'dyrt' : st.now < st.avg * 0.75 ? 'billigt' : 'normalt'
 
+  // Utan effektmätare (Pulse) visar kurvan dagens elpris i stället.
+  const priceMode = power === undefined && prices.length > 1
   const path = useMemo(() => {
+    if (priceMode) {
+      const W = 320
+      const H = 84
+      const max = Math.max(...prices.map((p) => p.price)) * 1.08
+      const t0 = new Date(prices[0].start).getTime()
+      const span = new Date(prices[prices.length - 1].start).getTime() - t0 || 1
+      const xy = prices.map((p) => [((new Date(p.start).getTime() - t0) / span) * W, H - (p.price / max) * (H - 6) - 2] as const)
+      let d = `M${xy[0][0].toFixed(1)},${xy[0][1].toFixed(1)}`
+      for (let i = 1; i < xy.length; i++) d += ` L${xy[i][0].toFixed(1)},${xy[i - 1][1].toFixed(1)} L${xy[i][0].toFixed(1)},${xy[i][1].toFixed(1)}`
+      const nowI = Math.max(0, st?.nowIdx ?? 0)
+      const end = xy[nowI]
+      return { line: d, area: `${d} L${W},${H} L0,${H} Z`, end, W, H }
+    }
     if (pts.length < 2) return null
     const W = 320
     const H = 84
@@ -56,7 +72,7 @@ export function PowerPulse({ onOpen }: { onOpen: () => void }) {
     }
     const end = xy[xy.length - 1]
     return { line: d, area: `${d} L${end[0].toFixed(1)},${H} L${xy[0][0].toFixed(1)},${H} Z`, end, W, H }
-  }, [pts])
+  }, [pts, priceMode, prices, st?.nowIdx])
 
   const kw = power === undefined ? '–' : (power / 1000).toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
@@ -64,10 +80,10 @@ export function PowerPulse({ onOpen }: { onOpen: () => void }) {
     <button className="pulse" onClick={onOpen} aria-label="Visa energi">
       <div className="pulse-head">
         <div>
-          <div className="pulse-label">Huset drar just nu</div>
+          <div className="pulse-label">{priceMode ? 'Elpriset just nu' : 'Huset drar just nu'}</div>
           <div className="pulse-value">
-            {kw}
-            <span className="pulse-unit">kW</span>
+            {priceMode ? kr(st?.now ?? 0) : kw}
+            <span className="pulse-unit">{priceMode ? 'kr/kWh' : 'kW'}</span>
           </div>
         </div>
         <ChevronRight className="pulse-chev" size={20} aria-hidden />
@@ -89,11 +105,21 @@ export function PowerPulse({ onOpen }: { onOpen: () => void }) {
       )}
       <div className="pulse-foot">
         <span className={`price-chip ${level ?? ''}`}>
-          {st?.now !== undefined ? `${kr(st.now)} kr/kWh` : 'Elpris saknas'}
+          {priceMode
+            ? st && st.best >= 0
+              ? `Billigast ${new Date(prices[st.best].start).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`
+              : 'Dagens pris'
+            : st?.now !== undefined
+              ? `${kr(st.now)} kr/kWh`
+              : 'Elpris saknas'}
           {level && <span className="price-level">{level}</span>}
         </span>
         <span className="pulse-cost">
-          {cost !== undefined ? `${cost.toLocaleString('sv-SE', { maximumFractionDigits: 0 })} kr hittills idag` : ''}
+          {cost !== undefined
+            ? `${cost.toLocaleString('sv-SE', { maximumFractionDigits: 0 })} kr hittills idag`
+            : monthCost !== undefined
+              ? `${Math.round(monthCost).toLocaleString('sv-SE')} kr i månaden`
+              : ''}
         </span>
       </div>
     </button>

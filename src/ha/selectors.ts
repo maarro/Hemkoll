@@ -17,12 +17,27 @@ function findFirst(ents: HassEntities, override: string, test: (e: HassEntity) =
   return Object.values(ents).find(test)
 }
 
+/**
+ * Tibbers sensorer. Namnen blir engelska eller svenska beroende på HA:s språk,
+ * så både entity_id och visningsnamn matchas (t.ex. "electricity_price" / "Elpris").
+ */
 export function tibber(ents: HassEntities) {
+  const sensors = Object.values(ents).filter((e) => domainOf(e.entity_id) === 'sensor')
+  const match = (re: RegExp, test?: (e: HassEntity) => boolean) =>
+    sensors.find((e) => (re.test(e.entity_id) || re.test(nameOf(e))) && (!test || test(e)))
+  const unit = (e: HassEntity) => String(e.attributes.unit_of_measurement ?? '')
   return {
-    power: findFirst(ents, config.mainPower, (e) => e.entity_id.startsWith('sensor.power_') && e.attributes.unit_of_measurement === 'W'),
-    price: findFirst(ents, config.price, (e) => e.entity_id.startsWith('sensor.electricity_price_')),
-    cost: findFirst(ents, config.costToday, (e) => e.entity_id.startsWith('sensor.accumulated_cost')),
-    consumption: findFirst(ents, config.consumptionToday, (e) => e.entity_id.startsWith('sensor.accumulated_consumption')),
+    power: findFirst(ents, config.mainPower, (e) =>
+      domainOf(e.entity_id) === 'sensor' &&
+      unit(e) === 'W' &&
+      /^sensor\.(power|effekt)(_|$)|tibber|pulse|^effekt$/i.test(e.entity_id + ' ' + nameOf(e)) &&
+      !/_power$|uttag|plug/i.test(e.entity_id),
+    ),
+    price: config.price ? ents[config.price] : match(/electricity_price|elpris/i, (e) => /\/kWh$/i.test(unit(e))),
+    cost: config.costToday ? ents[config.costToday] : match(/accumulated_cost|ackumulerad[_ ]kostnad/i),
+    consumption: config.consumptionToday ? ents[config.consumptionToday] : match(/accumulated_consumption|ackumulerad[_ ]förbrukning|ackumulerad_forbrukning/i),
+    monthCost: match(/monthly_cost|månadskostnad|manadskostnad/i),
+    monthConsumption: match(/monthly_net_consumption|månatlig[_ ]nettoförbrukning|manatlig_nettoforbrukning/i),
   }
 }
 

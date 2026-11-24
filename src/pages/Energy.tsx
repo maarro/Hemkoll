@@ -23,27 +23,47 @@ export function Energy() {
     <div className="stack">
       <section className="card energy-hero">
         <div>
-          <div className="muted">Huset drar just nu</div>
-          <div className="huge">{watts(power)}</div>
+          <div className="muted">{power !== undefined ? 'Huset drar just nu' : 'Elpriset just nu'}</div>
+          <div className="huge">{power !== undefined ? watts(power) : price !== undefined ? `${price.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kr/kWh` : '–'}</div>
           <div className="muted">
             {costPerHour !== undefined
               ? `Det motsvarar ${costPerHour.toLocaleString('sv-SE', { maximumFractionDigits: 2 })} kr i timmen`
-              : 'Koppla in Tibber Pulse för att se effekten i realtid'}
+              : 'Effekten i realtid kommer när Pulse sitter i elmätaren'}
           </div>
         </div>
         <dl className="facts">
-          <div>
-            <dt>Kostnad idag</dt>
-            <dd>
-              {num(t.cost)?.toLocaleString('sv-SE', { maximumFractionDigits: 1 }) ?? '–'} <span className="unit">kr</span>
-            </dd>
-          </div>
-          <div>
-            <dt>Förbrukat idag</dt>
-            <dd>
-              {num(t.consumption)?.toLocaleString('sv-SE', { maximumFractionDigits: 1 }) ?? '–'} <span className="unit">kWh</span>
-            </dd>
-          </div>
+          {num(t.cost) !== undefined && (
+            <div>
+              <dt>Kostnad idag</dt>
+              <dd>
+                {num(t.cost)?.toLocaleString('sv-SE', { maximumFractionDigits: 1 })} <span className="unit">kr</span>
+              </dd>
+            </div>
+          )}
+          {num(t.consumption) !== undefined && (
+            <div>
+              <dt>Förbrukat idag</dt>
+              <dd>
+                {num(t.consumption)?.toLocaleString('sv-SE', { maximumFractionDigits: 1 })} <span className="unit">kWh</span>
+              </dd>
+            </div>
+          )}
+          {num(t.monthCost) !== undefined && (
+            <div>
+              <dt>Kostnad i månaden</dt>
+              <dd>
+                {Math.round(num(t.monthCost) as number).toLocaleString('sv-SE')} <span className="unit">kr</span>
+              </dd>
+            </div>
+          )}
+          {num(t.monthConsumption) !== undefined && (
+            <div>
+              <dt>Förbrukat i månaden</dt>
+              <dd>
+                {Math.round(num(t.monthConsumption) as number).toLocaleString('sv-SE')} <span className="unit">kWh</span>
+              </dd>
+            </div>
+          )}
         </dl>
       </section>
 
