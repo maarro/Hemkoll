@@ -91,11 +91,27 @@ export function consumers(ents: HassEntities) {
 
 export type MediaKind = 'speaker' | 'tv' | 'console'
 
+// Typ utifrån enhetens tillverkare och modell (från HA:s enhetsregister), sätts av HassProvider.
+let kindHints: Record<string, MediaKind> = {}
+export const setKindHints = (h: Record<string, MediaKind>) => {
+  kindHints = h
+}
+
+/** Gissar typ utifrån tillverkare och modell, t.ex. Sonos One eller Google Nest Mini. */
+export function kindFromDevice(manufacturer = '', model = ''): MediaKind | undefined {
+  const t = `${manufacturer} ${model}`.toLowerCase()
+  if (/playstation|sony interactive|xbox/.test(t)) return 'console'
+  if (/chromecast|google tv|android tv|apple tv|shield|bravia|samsung|lg/.test(t)) return 'tv'
+  if (/sonos|google home|nest mini|nest audio|nest hub|home mini|home max|speaker|homepod/.test(t)) return 'speaker'
+  return undefined
+}
+
 export function mediaKind(e: HassEntity): MediaKind {
   if (config.mediaKind[e.entity_id]) return config.mediaKind[e.entity_id]
+  if (kindHints[e.entity_id]) return kindHints[e.entity_id]
   const t = (nameOf(e) + ' ' + e.entity_id).toLowerCase()
   if (/playstation|ps5|ps4|xbox|switch_console/.test(t)) return 'console'
-  if (/sonos|google home|google_home|nest|högtalare|hogtalare|speaker/.test(t)) return 'speaker'
+  if (/sonos|google home|google_home|nest|högtalare|hogtalare|speaker|homepod/.test(t)) return 'speaker'
   return 'tv'
 }
 

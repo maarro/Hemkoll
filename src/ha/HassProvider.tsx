@@ -7,6 +7,7 @@ import {
   type Connection,
 } from 'home-assistant-js-websocket'
 import type { Area, Hass, HassEntities, LogEvent, PricePoint, Settings, Status } from './types'
+import { kindFromDevice, setKindHints, type MediaKind } from './selectors'
 import { initialMockEntities, mockAreaOf, mockAreas, mockDailyCost, mockLogbook, mockPowerHistory, mockPrices, mockService, tick } from './mock'
 
 const Ctx = createContext<Hass | null>(null)
@@ -229,10 +230,14 @@ type RegEntity = {
 async function loadRegistries(c: Connection) {
   const [areaList, devices, entityList] = await Promise.all([
     c.sendMessagePromise<{ area_id: string; name: string; icon?: string | null }[]>({ type: 'config/area_registry/list' }),
-    c.sendMessagePromise<{ id: string; area_id: string | null }[]>({ type: 'config/device_registry/list' }),
+    c.sendMessagePromise<{ id: string; area_id: string | null; manufacturer?: string | null; model?: string | null }[]>({
+      type: 'config/device_registry/list',
+    }),
     c.sendMessagePromise<RegEntity[]>({ type: 'config/entity_registry/list' }),
   ])
   const deviceArea = new Map(devices.map((d) => [d.id, d.area_id]))
+  const deviceKind = new Map(devices.map((d) => [d.id, kindFromDevice(d.manufacturer ?? '', d.model ?? '')]))
+  const hints: Record<string, MediaKind> = {}
   const areaOf: Record<string, string> = {}
   const noise = new Set<string>()
   for (const e of entityList) {
@@ -240,9 +245,12 @@ async function loadRegistries(c: Connection) {
     if (!id) continue
     if (e.entity_category || e.ec != null || e.hidden_by || e.hb) noise.add(id)
     const dev = e.device_id ?? e.di
+    const kind = dev ? deviceKind.get(dev) : undefined
+    if (kind && id.startsWith('media_player.')) hints[id] = kind
     const area = e.area_id ?? e.ai ?? (dev ? deviceArea.get(dev) : null)
     if (area) areaOf[id] = area
   }
   const areas = areaList.map((a) => ({ id: a.area_id, name: a.name })).sort((a, b) => a.name.localeCompare(b.name, 'sv'))
+  setKindHints(hints)
   return { areas, areaOf, noise }
 }
