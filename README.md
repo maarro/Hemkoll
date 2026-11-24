@@ -32,7 +32,7 @@ npm run build
 # kopiera innehållet i dist/ till /config/www/hemkoll/ på HA (Samba- eller File editor-tillägget)
 ```
 
-Öppna `http://homeassistant.local:8123/local/hemkoll/index.html` och lägg till på hemskärmen.
+Öppna `http://homeassistant.local/local/hemkoll/index.html` (nyare installationer kör på port 80; äldre använder `:8123`` och lägg till på hemskärmen.
 Då behöver du bara klistra in token första gången, och adressen fylls i automatiskt.
 
 ## Flikarna

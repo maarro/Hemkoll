@@ -4,7 +4,7 @@ import type { Settings } from '../ha/types'
 
 export function SettingsPage({ settings, onSave }: { settings: Settings; onSave: (s: Settings) => void }) {
   const { status, error, entities } = useHass()
-  const [url, setUrl] = useState(settings.url || 'http://homeassistant.local:8123')
+  const [url, setUrl] = useState(settings.url || (typeof window !== 'undefined' ? window.location.origin : 'http://homeassistant.local'))
   const [token, setToken] = useState(settings.token)
 
   return (
@@ -28,7 +28,7 @@ export function SettingsPage({ settings, onSave }: { settings: Settings; onSave:
         {error && <p className="error small">{error}</p>}
         <label className="field">
           <span>Adress</span>
-          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="http://homeassistant.local:8123" />
+          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="http://homeassistant.local" />
         </label>
         <label className="field">
           <span>Långlivad åtkomsttoken</span>
