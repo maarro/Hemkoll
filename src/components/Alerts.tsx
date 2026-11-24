@@ -1,15 +1,18 @@
-import { BatteryLow, CircleCheck, LockOpen, WifiOff, TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react'
+import { BatteryLow, CircleCheck, Download, House, LockOpen, Moon, ShieldOff, WifiOff, TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { config } from '../config'
 import { useHass } from '../ha/HassProvider'
-import { domainOf, lowBatteries, nameOf, network } from '../ha/selectors'
+import { alarmPanel, domainOf, everyoneAway, forgottenOn, lowBatteries, nameOf, network, updates } from '../ha/selectors'
+import { runScene } from '../ha/scenes'
+import { useUi } from '../ui/UiContext'
 import { hhmm, kr, priceStats, usePrices } from '../ha/usePrices'
 
 type Alert = { id: string; tone: 'warn' | 'good' | 'info'; icon: LucideIcon; text: string; action?: { label: string; run: () => void } }
 
 /** "Just nu": det som är värt att veta utan att leta. Visar inget när allt är lugnt. */
 export function Alerts() {
-  const { entities, callService, getLogbook, status } = useHass()
+  const { entities, callService, getLogbook, status, baseUrl } = useHass()
+  const { openAlarm, toast } = useUi()
   const { prices } = usePrices()
   // Vitvaror som blivit klara: läses från logboken, så att en omstart av HA inte ger falska "klar".
   const [done, setDone] = useState<Record<string, number>>({})
@@ -36,17 +39,59 @@ export function Alerts() {
   const alerts: Alert[] = []
   const now = Date.now()
 
-  // Olåsta lås
-  for (const e of Object.values(entities)) {
-    if (domainOf(e.entity_id) !== 'lock' || e.state !== 'unlocked') continue
-    const since = new Date(e.last_changed).getTime()
+  const hour = new Date().getHours()
+  const evening = hour >= config.eveningFrom || hour < 5
+  const away = everyoneAway(entities)
+  const unlocked = Object.values(entities).filter((e) => domainOf(e.entity_id) === 'lock' && e.state === 'unlocked')
+  const alarm = alarmPanel(entities)
+  const night = config.scenes.find((s) => s.id === 'natt')
+
+  // Kvällsrutin: någon är hemma, det är sent och dörren är olåst eller larmet av
+  if (evening && !away && night && (unlocked.length || alarm?.state === 'disarmed')) {
+    const what = [unlocked.length ? `${unlocked.map((e) => nameOf(e).toLowerCase()).join(' och ')} är olåst` : '', alarm?.state === 'disarmed' ? 'larmet är av' : '']
+      .filter(Boolean)
+      .join(' och ')
     alerts.push({
-      id: e.entity_id,
-      tone: 'warn',
-      icon: LockOpen,
-      text: `${nameOf(e)} är olåst${now - since > 60_000 ? ` sedan ${hhmm(since)}` : ''}`,
-      action: { label: 'Lås', run: () => callService('lock', 'lock', {}, { entity_id: e.entity_id }) },
+      id: 'evening',
+      tone: 'info',
+      icon: Moon,
+      text: `Dags för natten? ${what[0].toUpperCase()}${what.slice(1)}.`,
+      action: unlocked.length
+        ? { label: night.name, run: () => runScene(night, entities, callService).then(() => toast(`${night.name} klart`)) }
+        : alarm
+          ? { label: 'Larma', run: () => openAlarm(alarm.entity_id) }
+          : undefined,
     })
+  } else {
+    // Olåsta lås
+    for (const e of unlocked) {
+      const since = new Date(e.last_changed).getTime()
+      alerts.push({
+        id: e.entity_id,
+        tone: 'warn',
+        icon: LockOpen,
+        text: `${nameOf(e)} är olåst${now - since > 60_000 ? ` sedan ${hhmm(since)}` : ''}`,
+        action: { label: 'Lås', run: () => callService('lock', 'lock', {}, { entity_id: e.entity_id }) },
+      })
+    }
+  }
+
+  // Alla har gått: larmet är av, eller något står på
+  if (away) {
+    if (alarm?.state === 'disarmed')
+      alerts.push({ id: 'away-alarm', tone: 'warn', icon: ShieldOff, text: 'Alla har gått men larmet är av', action: { label: 'Larma', run: () => openAlarm(alarm.entity_id) } })
+    const on = forgottenOn(entities)
+    if (on.length)
+      alerts.push({
+        id: 'away-on',
+        tone: 'warn',
+        icon: House,
+        text: `Ingen är hemma men ${on.length === 1 ? `${nameOf(on[0])} är på` : `${on.length} saker är på: ${on.map((e) => nameOf(e)).join(', ')}`}`,
+        action: {
+          label: 'Stäng av',
+          run: () => callService('homeassistant', 'turn_off', {}, { entity_id: on.map((e) => e.entity_id) }).then(() => toast('Avstängt')),
+        },
+      })
   }
 
   // Internet nere
@@ -64,6 +109,17 @@ export function Alerts() {
         low.length === 1
           ? `Byt batteri i ${nameOf(low[0].e).replace(/ ?batteri$/i, '')}, ${Math.round(low[0].level)} % kvar`
           : `Lågt batteri i ${low.length} enheter: ${low.map((b) => nameOf(b.e).replace(/ ?batteri$/i, '')).join(', ')}`,
+    })
+
+  // Uppdateringar
+  const ups = updates(entities)
+  if (ups.length)
+    alerts.push({
+      id: 'updates',
+      tone: 'info',
+      icon: Download,
+      text: ups.length === 1 ? `Ny version finns för ${String(ups[0].attributes.title ?? nameOf(ups[0]))}` : `${ups.length} uppdateringar finns`,
+      action: baseUrl ? { label: 'Visa', run: () => window.open(`${baseUrl}/config/updates`, '_blank') } : undefined,
     })
 
   // Vitvaror som blivit klara senaste två timmarna

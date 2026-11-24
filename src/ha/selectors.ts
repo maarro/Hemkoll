@@ -206,3 +206,43 @@ export function lowBatteries(ents: HassEntities, limit = 20) {
     .filter((b): b is { e: HassEntity; level: number } => b.level !== undefined && b.level <= limit)
     .sort((a, b) => a.level - b.level)
 }
+
+/** Alla med en person-entitet är borta (och det finns minst en). */
+export function everyoneAway(ents: HassEntities) {
+  const p = persons(ents)
+  return p.length > 0 && p.every((e) => e.state !== 'home')
+}
+
+/** Saker som är igång och lätt glöms: mediaspelare, konsoler och datorer. Inte kyl, frys eller tvätt. */
+export function forgottenOn(ents: HassEntities) {
+  const media = mediaPlayers(ents).filter((e) => ['playing', 'paused', 'on', 'buffering'].includes(e.state))
+  const pcs = computers(ents).filter((e) => e.state === 'on')
+  return [...media, ...pcs]
+}
+
+/** Tillgängliga uppdateringar (update.*). */
+export const updates = (ents: HassEntities) => Object.values(ents).filter((e) => domainOf(e.entity_id) === 'update' && e.state === 'on')
+
+export const calendars = (ents: HassEntities) => Object.values(ents).filter((e) => domainOf(e.entity_id) === 'calendar' && visible(e.entity_id))
+
+/**
+ * Nästa sophämtning: en sensor med "sop", "avfall", "tömning" eller "waste" i namnet
+ * vars värde är ett datum eller antal dagar kvar.
+ */
+export function wastePickups(ents: HassEntities) {
+  const re = /sop|avfall|t[oö]mning|waste|garbage|trash|h[aä]mtning/i
+  const out: { name: string; days: number }[] = []
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  for (const e of Object.values(ents)) {
+    if (domainOf(e.entity_id) !== 'sensor' || !(re.test(e.entity_id) || re.test(nameOf(e)))) continue
+    let days: number | undefined
+    if (/^\d{4}-\d{2}-\d{2}/.test(e.state)) {
+      const d = new Date(e.state.length === 10 ? `${e.state}T00:00` : e.state)
+      d.setHours(0, 0, 0, 0)
+      days = Math.round((d.getTime() - today.getTime()) / 86400_000)
+    } else if (/^d|dag/i.test(String(e.attributes.unit_of_measurement ?? ''))) days = num(e)
+    if (days !== undefined && days >= 0) out.push({ name: nameOf(e), days })
+  }
+  return out.sort((a, b) => a.days - b.days)
+}

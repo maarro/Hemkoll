@@ -6,9 +6,9 @@ import {
   subscribeEntities,
   type Connection,
 } from 'home-assistant-js-websocket'
-import type { Area, Hass, HassEntities, LogEvent, PricePoint, Settings, Status } from './types'
+import type { Area, CalEvent, Hass, HassEntities, LogEvent, PricePoint, Settings, Status } from './types'
 import { kindFromDevice, setKindHints, type MediaKind } from './selectors'
-import { initialMockEntities, mockAreaOf, mockAreas, mockDailyCost, mockLogbook, mockPowerHistory, mockPrices, mockService, tick } from './mock'
+import { initialMockEntities, mockAreaOf, mockAreas, mockDailyCost, mockEvents, mockHourly, mockLogbook, mockPowerHistory, mockPrices, mockService, tick } from './mock'
 
 const Ctx = createContext<Hass | null>(null)
 
@@ -105,7 +105,8 @@ export function HassProvider({ settings, children }: { settings: Settings; child
     if (!conn.current) return []
     const start = new Date()
     start.setHours(0, 0, 0, 0)
-    const end = new Date(start.getTime() + 24 * 3600_000)
+    // Idag och i morgon (morgondagens priser kommer vid lunch)
+    const end = new Date(start.getTime() + 48 * 3600_000)
     const res = (await haCallService(
       conn.current,
       'tibber',
@@ -157,6 +158,53 @@ export function HassProvider({ settings, children }: { settings: Settings; child
     [settings.demo],
   )
 
+  /** Kalenderhändelser, sorterade på starttid. */
+  const getEvents = useCallback(
+    async (calendarIds: string[], start: Date, end: Date): Promise<CalEvent[]> => {
+      if (settings.demo) return mockEvents()
+      if (!conn.current || !calendarIds.length) return []
+      const res = (await haCallService(
+        conn.current,
+        'calendar',
+        'get_events',
+        { start_date_time: start.toISOString(), end_date_time: end.toISOString() },
+        { entity_id: calendarIds },
+        true,
+      )) as { response?: Record<string, { events?: { summary?: string; start: string }[] }> }
+      const out: CalEvent[] = []
+      for (const [cal, v] of Object.entries(res?.response ?? {}))
+        for (const e of v.events ?? []) out.push({ calendar: cal, summary: e.summary ?? '', start: e.start, allDay: !e.start.includes('T') })
+      return out.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+    },
+    [settings.demo],
+  )
+
+  /** Timförbrukning från Tibbers statistik (finns utan Pulse). */
+  const getHourly = useCallback(
+    async (hours: number) => {
+      if (settings.demo) return mockHourly(hours)
+      const c = conn.current
+      if (!c) return []
+      const ids = await c
+        .sendMessagePromise<{ statistic_id: string }[]>({ type: 'recorder/list_statistic_ids', statistic_type: 'sum' })
+        .catch(() => [])
+      const id = ids.map((i) => i.statistic_id).find((i) => i.startsWith('tibber:energy_consumption'))
+      if (!id) return []
+      type Row = { start: number | string; change?: number | null }
+      const res = await c.sendMessagePromise<Record<string, Row[]>>({
+        type: 'recorder/statistics_during_period',
+        start_time: new Date(Date.now() - hours * 3600_000).toISOString(),
+        statistic_ids: [id],
+        period: 'hour',
+        types: ['change'],
+      })
+      return (res[id] ?? [])
+        .map((r) => ({ t: typeof r.start === 'number' ? r.start : new Date(r.start).getTime(), kwh: r.change ?? NaN }))
+        .filter((r) => Number.isFinite(r.kwh))
+    },
+    [settings.demo],
+  )
+
   /**
    * Kostnad per dag. Tibber lägger in egen statistik (tibber:energy_totalcost_<hem>) som
    * finns även utan Pulse – den används i första hand. Annars dagens maxvärde från en
@@ -202,6 +250,8 @@ export function HassProvider({ settings, children }: { settings: Settings; child
         getLogbook,
         getHistory,
         getDaily,
+        getEvents,
+        getHourly,
         areas,
         areaOf,
         noise,

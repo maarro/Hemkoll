@@ -114,6 +114,7 @@ button.card { width: 100%; text-align: left; }
 .alert.warn svg { color: var(--rose); }
 .alert.good { background: var(--moss-soft); }
 .alert.good svg { color: var(--moss); }
+.alert.info svg { color: var(--ice); }
 .alert-text { flex: 1; min-width: 0; }
 
 /* --- Scener --- */
@@ -337,3 +338,20 @@ button.card { width: 100%; text-align: left; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* --- Idag --- */
+.today { display: flex; flex-direction: column; gap: 2px; margin-top: -6px; }
+.today-row { display: flex; align-items: center; gap: 10px; padding: 4px 2px; color: var(--snow); font-size: 0.95rem; }
+.today-row svg { color: var(--mist); flex: none; }
+.today-time { color: var(--mist); min-width: 74px; font-variant-numeric: tabular-nums; }
+.today-what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- Planering och standby --- */
+.plan { list-style: none; margin: 4px 0 10px; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.plan li { display: flex; align-items: center; gap: 12px; }
+.plan li > svg { color: var(--ice); flex: none; }
+.plan li > div { flex: 1; min-width: 0; }
+.plan-name { font-weight: 500; }
+.plan-when { color: var(--ice); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.standby-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 4px 0 8px; }
+.standby-row .big { font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; }

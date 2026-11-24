@@ -4,6 +4,7 @@ import { TileGrid } from '../components/EntityTile'
 import { AlarmCard, ApplianceCards, BambuCard, BathroomCard, CameraStrip, NetworkCard } from '../components/HomeCards'
 import { PowerPulse } from '../components/PowerPulse'
 import { Scenes } from '../components/Scenes'
+import { Today } from '../components/Today'
 import { useFavorites } from '../ui/favorites'
 
 /** Hem: husets puls, det som behöver uppmärksamhet, scener, favoriter och kameror. */
@@ -13,6 +14,7 @@ export function Home({ goEnergy }: { goEnergy: () => void }) {
 
   return (
     <div className="stack">
+      <Today />
       <PowerPulse onOpen={goEnergy} />
       <Alerts />
       <Scenes />

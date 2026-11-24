@@ -1,6 +1,6 @@
 // Demoläge: låtsas-Home Assistant med dina prylar, så att appen går att
 // utveckla och visa innan hårdvaran är på plats.
-import type { Area, HassEntities, HassEntity, LogEvent, PricePoint } from './types'
+import type { Area, CalEvent, HassEntities, HassEntity, LogEvent, PricePoint } from './types'
 
 const now = () => new Date().toISOString()
 
@@ -111,6 +111,11 @@ export function initialMockEntities(): HassEntities {
     ent('lock.ytterdorr', 'unlocked', { friendly_name: 'Ytterdörren' }),
     ent('alarm_control_panel.hemlarm', 'disarmed', { friendly_name: 'Hemlarm', code_format: 'number', code_arm_required: false }),
 
+    // Kalender, sopor och uppdateringar
+    ent('calendar.familjen', 'off', { friendly_name: 'Familjen' }),
+    ent('sensor.sophamtning', new Date(Date.now() + 86400_000).toISOString().slice(0, 10), { device_class: 'date', friendly_name: 'Sophämtning' }),
+    ent('update.home_assistant_core_update', 'on', { friendly_name: 'Home Assistant Core', title: 'Home Assistant', latest_version: '2026.12.0' }),
+
     // Nätverk och batterier
     ent('sensor.google_wifi_status', 'Online', { friendly_name: 'Google Wifi status' }),
     ent('sensor.google_wifi_uptime', '12.4', { unit_of_measurement: 'days', friendly_name: 'Google Wifi drifttid' }),
@@ -165,11 +170,41 @@ export function currentMockPrice() {
   return priceAt(new Date())
 }
 
+/** Familjekalendern i demot. */
+export function mockEvents(): CalEvent[] {
+  const at = (dayOffset: number, h: number, m = 0) => {
+    const d = new Date()
+    d.setDate(d.getDate() + dayOffset)
+    d.setHours(h, m, 0, 0)
+    return d.toISOString()
+  }
+  const now = Date.now()
+  return [
+    { calendar: 'calendar.familjen', summary: 'Innebandyträning', start: at(0, 18, 0), allDay: false },
+    { calendar: 'calendar.familjen', summary: 'Föräldramöte', start: at(0, 20, 30), allDay: false },
+    { calendar: 'calendar.familjen', summary: 'Tandläkare', start: at(1, 8, 30), allDay: false },
+  ].filter((e) => new Date(e.start).getTime() > now - 3600_000)
+}
+
+/** Timförbrukning (kWh): runt 0,35 på natten, toppar på morgon och kväll. */
+export function mockHourly(hours: number): { t: number; kwh: number }[] {
+  const out: { t: number; kwh: number }[] = []
+  const now = new Date()
+  now.setMinutes(0, 0, 0)
+  for (let i = hours; i > 0; i--) {
+    const t = now.getTime() - i * 3600_000
+    const h = new Date(t).getHours()
+    const base = h >= 1 && h < 6 ? 0.34 : h >= 17 && h < 22 ? 1.6 : h >= 6 && h < 9 ? 1.2 : 0.8
+    out.push({ t, kwh: +(base + ((i * 7919) % 10) / 100).toFixed(2) })
+  }
+  return out
+}
+
 export function mockPrices(): PricePoint[] {
   const start = new Date()
   start.setHours(0, 0, 0, 0)
   const out: PricePoint[] = []
-  for (let i = 0; i < 96; i++) {
+  for (let i = 0; i < 192; i++) {
     const d = new Date(start.getTime() + i * 15 * 60_000)
     out.push({ start: d.toISOString(), price: priceAt(d) })
   }

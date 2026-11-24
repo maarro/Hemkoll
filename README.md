@@ -101,3 +101,11 @@ homeassistant/packages ← automationer att lägga i HA
 - **"Stäng av allt"** stänger av alla uttag som är på. Lägg kyl, frys och router i
   `config.hidden` eller använd en Shelly Plug PM (har ingen strömbrytare).
 - Tibber har kvartspriser, och grafen hanterar både 15- och 60-minutersintervall.
+
+## Smarta tillägg
+- **Idag**: familjekalendern (alla `calendar.*`) och nästa sophämtning (sensor med "sop", "avfall" eller "tömning" i namnet).
+- **Kvällsrutin**: från kl 22 (`eveningFrom` i config) föreslås God natt om dörren är olåst eller larmet av.
+- **Alla har gått**: varning om larmet är av eller om TV, konsol eller dator står på, med knapp för att stänga av.
+- **Uppdateringar**: syns när Home Assistant har nya versioner.
+- **Lågt batteri** under 20 % och **Internet nere** (Google Wifi).
+- **Energi**: bästa tid att tvätta (`kwh` och `hours` per vitvara i config), standby på natten från Tibbers timstatistik och prognos för månadens kostnad.

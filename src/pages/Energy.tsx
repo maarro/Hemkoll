@@ -5,6 +5,7 @@ import { PriceChart } from '../components/PriceChart'
 import { CostHistory } from '../components/CostHistory'
 import { watts } from '../components/Tiles'
 import { applianceIcon } from '../ui/icons'
+import { LaundryPlanner, Standby, monthForecast } from '../components/EnergyPlus'
 
 /** Energi: effekt, kostnad, elpris och vad som drar mest. */
 export function Energy() {
@@ -17,6 +18,8 @@ export function Energy() {
   const topMax = Math.max(1, ...top.map((c) => c.watts))
 
   const appliances = config.appliances.filter((a) => entities[a.power])
+  const forecast = monthForecast(num(t.monthCost))
+  const monthName = new Date().toLocaleDateString('sv-SE', { month: 'long' })
 
 
   return (
@@ -56,6 +59,14 @@ export function Energy() {
               </dd>
             </div>
           )}
+          {forecast !== undefined && (
+            <div>
+              <dt>Prognos för {monthName}</dt>
+              <dd>
+                {(Math.round(forecast / 10) * 10).toLocaleString('sv-SE')} <span className="unit">kr</span>
+              </dd>
+            </div>
+          )}
           {num(t.monthConsumption) !== undefined && (
             <div>
               <dt>Förbrukat i månaden</dt>
@@ -83,6 +94,8 @@ export function Energy() {
         </div>
       )}
 
+      <LaundryPlanner />
+
       <section className="card">
         <h2>Kostnad per dag</h2>
         <CostHistory />
@@ -92,6 +105,8 @@ export function Energy() {
         <h2>Elpris idag</h2>
         <PriceChart />
       </section>
+
+      <Standby />
 
       <section className="card">
         <h2>Drar mest just nu</h2>

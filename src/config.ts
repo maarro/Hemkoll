@@ -14,10 +14,11 @@ export const config = {
   /**
    * Vitvaror på mätande uttag (Shelly Plug PM Gen3).
    * power = effektsensorn i W, running = input_boolean från HA-paketet hemkoll_tvattstuga.yaml
+   * kwh och hours = ett vanligt program, används för att räkna ut billigaste starttid.
    */
   appliances: [
-    { name: 'Tvättmaskin', icon: '🫧', verb: 'Tvättar', power: 'sensor.tvattmaskin_power', running: 'input_boolean.tvatt_pagar' },
-    { name: 'Torktumlare', icon: '🌀', verb: 'Torkar', power: 'sensor.torktumlare_power', running: 'input_boolean.tork_pagar' },
+    { name: 'Tvättmaskin', icon: '🫧', verb: 'Tvättar', power: 'sensor.tvattmaskin_power', running: 'input_boolean.tvatt_pagar', kwh: 1.0, hours: 2 },
+    { name: 'Torktumlare', icon: '🌀', verb: 'Torkar', power: 'sensor.torktumlare_power', running: 'input_boolean.tork_pagar', kwh: 2.5, hours: 2 },
   ],
 
   /**
@@ -26,6 +27,9 @@ export const config = {
    * Tom lista = allt vars namn innehåller "dator", "pc" eller "mac".
    */
   computers: [] as string[],
+
+  /** Kvällsrutin: från denna timme påminner Hemkoll om att låsa och larma. */
+  eveningFrom: 22,
 
 
   /**

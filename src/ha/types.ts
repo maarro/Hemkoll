@@ -22,7 +22,18 @@ export interface LogEvent {
   name: string
 }
 
+export interface CalEvent {
+  calendar: string
+  summary: string
+  start: string // ISO eller datum (heldag)
+  allDay: boolean
+}
+
 export interface Hass {
+  /** Kalenderhändelser via calendar.get_events. */
+  getEvents: (calendarIds: string[], start: Date, end: Date) => Promise<CalEvent[]>
+  /** Förbrukning per timme (kWh) från Tibbers statistik, äldst först. */
+  getHourly: (hours: number) => Promise<{ t: number; kwh: number }[]>
   /** Rum från Home Assistant (area registry). Tom lista om inga rum finns. */
   areas: Area[]
   /** entity_id -> area_id. Entiteter som är dolda eller diagnostik saknas här och i ui:t. */
