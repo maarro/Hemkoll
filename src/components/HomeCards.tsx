@@ -1,8 +1,8 @@
-import { Droplets, Printer, ShieldAlert, ShieldCheck, ShieldOff, Thermometer, Wind } from 'lucide-react'
+import { Droplets, Printer, Wifi, WifiOff, ShieldAlert, ShieldCheck, ShieldOff, Thermometer, Wind } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { config } from '../config'
 import { useHass } from '../ha/HassProvider'
-import { alarmPanel, bambu, bathroom, cameras, nameOf, num } from '../ha/selectors'
+import { alarmPanel, bambu, bathroom, cameras, nameOf, network, num } from '../ha/selectors'
 import { kr, priceStats, usePrices } from '../ha/usePrices'
 import { useUi } from '../ui/UiContext'
 import { applianceIcon } from '../ui/icons'
@@ -45,6 +45,24 @@ export function ApplianceCards() {
           </div>
         ))}
     </>
+  )
+}
+
+/** Internet via Google Wifi: syns bara när integrationen finns. */
+export function NetworkCard() {
+  const { entities } = useHass()
+  const n = network(entities)
+  if (!n) return null
+  const down = !n.online && !n.unknown
+  const days = n.uptimeDays
+  const since =
+    days === undefined ? '' : days < 1 ? `i ${Math.max(1, Math.round(days * 24))} tim` : `i ${Math.floor(days)} ${Math.floor(days) === 1 ? 'dag' : 'dagar'}`
+  return (
+    <div className={`card status ${down ? 'warn' : n.online ? 'secure' : ''}`}>
+      {down ? <WifiOff size={22} strokeWidth={1.75} aria-hidden /> : <Wifi size={22} strokeWidth={1.75} aria-hidden />}
+      <span className="status-name">Internet</span>
+      <span className="status-value">{down ? 'Nere' : n.unknown ? 'Får inget svar från routern' : `Uppe ${since}`}</span>
+    </div>
   )
 }
 

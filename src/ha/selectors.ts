@@ -184,3 +184,25 @@ export function roomTemperature(ents: HassEntities, areaOf: Record<string, strin
     .filter((v): v is number => v !== undefined)
   return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : undefined
 }
+
+/** Google Wifi (eller annan router) via integrationen google_wifi. */
+export function network(ents: HassEntities) {
+  const status = Object.values(ents).find((e) => /^sensor\.google_wifi.*status$/.test(e.entity_id))
+  if (!status) return undefined
+  const uptime = Object.values(ents).find((e) => /^sensor\.google_wifi.*uptime$/.test(e.entity_id))
+  const s = status.state.toLowerCase()
+  return {
+    online: s === 'online',
+    unknown: s === 'unavailable' || s === 'unknown',
+    uptimeDays: num(uptime),
+  }
+}
+
+/** Enheter med lågt batteri (lås, sensorer, fjärrkontroller). */
+export function lowBatteries(ents: HassEntities, limit = 20) {
+  return Object.values(ents)
+    .filter((e) => domainOf(e.entity_id) === 'sensor' && e.attributes.device_class === 'battery' && visible(e.entity_id))
+    .map((e) => ({ e, level: num(e) }))
+    .filter((b): b is { e: HassEntity; level: number } => b.level !== undefined && b.level <= limit)
+    .sort((a, b) => a.level - b.level)
+}

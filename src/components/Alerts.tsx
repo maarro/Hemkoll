@@ -1,8 +1,8 @@
-import { CircleCheck, LockOpen, TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react'
+import { BatteryLow, CircleCheck, LockOpen, WifiOff, TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { config } from '../config'
 import { useHass } from '../ha/HassProvider'
-import { domainOf, nameOf } from '../ha/selectors'
+import { domainOf, lowBatteries, nameOf, network } from '../ha/selectors'
 import { hhmm, kr, priceStats, usePrices } from '../ha/usePrices'
 
 type Alert = { id: string; tone: 'warn' | 'good' | 'info'; icon: LucideIcon; text: string; action?: { label: string; run: () => void } }
@@ -48,6 +48,23 @@ export function Alerts() {
       action: { label: 'Lås', run: () => callService('lock', 'lock', {}, { entity_id: e.entity_id }) },
     })
   }
+
+  // Internet nere
+  const net = network(entities)
+  if (net && !net.online && !net.unknown) alerts.push({ id: 'net', tone: 'warn', icon: WifiOff, text: 'Internet är nere. Enheter i hemmet fungerar, men inte utifrån.' })
+
+  // Lågt batteri
+  const low = lowBatteries(entities)
+  if (low.length)
+    alerts.push({
+      id: 'battery',
+      tone: 'warn',
+      icon: BatteryLow,
+      text:
+        low.length === 1
+          ? `Byt batteri i ${nameOf(low[0].e).replace(/ ?batteri$/i, '')}, ${Math.round(low[0].level)} % kvar`
+          : `Lågt batteri i ${low.length} enheter: ${low.map((b) => nameOf(b.e).replace(/ ?batteri$/i, '')).join(', ')}`,
+    })
 
   // Vitvaror som blivit klara senaste två timmarna
   for (const a of config.appliances) {

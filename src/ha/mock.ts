@@ -111,6 +111,11 @@ export function initialMockEntities(): HassEntities {
     ent('lock.ytterdorr', 'unlocked', { friendly_name: 'Ytterdörren' }),
     ent('alarm_control_panel.hemlarm', 'disarmed', { friendly_name: 'Hemlarm', code_format: 'number', code_arm_required: false }),
 
+    // Nätverk och batterier
+    ent('sensor.google_wifi_status', 'Online', { friendly_name: 'Google Wifi status' }),
+    ent('sensor.google_wifi_uptime', '12.4', { unit_of_measurement: 'days', friendly_name: 'Google Wifi drifttid' }),
+    ent('sensor.ytterdorr_batteri', '14', { device_class: 'battery', unit_of_measurement: '%', friendly_name: 'Ytterdörren batteri' }),
+
     // Väder och personer
     ent('weather.forecast_hem', 'cloudy', { friendly_name: 'Hem', temperature: 2.4, temperature_unit: '°C' }),
     ent('person.marcus', 'home', { friendly_name: 'Marcus' }),

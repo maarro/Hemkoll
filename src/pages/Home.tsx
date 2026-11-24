@@ -1,7 +1,7 @@
 import { useHass } from '../ha/HassProvider'
 import { Alerts } from '../components/Alerts'
 import { TileGrid } from '../components/EntityTile'
-import { AlarmCard, ApplianceCards, BambuCard, BathroomCard, CameraStrip } from '../components/HomeCards'
+import { AlarmCard, ApplianceCards, BambuCard, BathroomCard, CameraStrip, NetworkCard } from '../components/HomeCards'
 import { PowerPulse } from '../components/PowerPulse'
 import { Scenes } from '../components/Scenes'
 import { useFavorites } from '../ui/favorites'
@@ -21,6 +21,7 @@ export function Home({ goEnergy }: { goEnergy: () => void }) {
         <AlarmCard />
         <BathroomCard />
         <ApplianceCards />
+        <NetworkCard />
       </div>
       <section>
         <h2 className="section-title">Favoriter</h2>
