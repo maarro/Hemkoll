@@ -1,31 +1,33 @@
+import { DoorOpen, Lock, LockOpen, ShieldAlert, ShieldCheck, TriangleAlert, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { applianceIcon } from '../ui/icons'
 import { config } from '../config'
 import { useHass } from '../ha/HassProvider'
 import { domainOf } from '../ha/selectors'
 import type { LogEvent } from '../ha/types'
 import { hhmm } from '../ha/usePrices'
 
-type Row = { when: number; icon: string; text: string; tone: 'warn' | 'good' | 'info' }
+type Row = { when: number; icon: LucideIcon; text: string; tone: 'warn' | 'good' | 'info' }
 
 /** Översätter logbokens tillståndsändringar till begripliga rader. */
 function describe(e: LogEvent, nameOf: (id: string) => string): Row | null {
   const app = config.appliances.find((a) => a.running === e.entity_id)
   if (app)
     return e.state === 'on'
-      ? { when: e.when, icon: app.icon, text: `${app.name} startade`, tone: 'info' }
-      : { when: e.when, icon: app.icon, text: `${app.name} klar`, tone: 'good' }
+      ? { when: e.when, icon: applianceIcon(app.name), text: `${app.name} startade`, tone: 'info' }
+      : { when: e.when, icon: applianceIcon(app.name), text: `${app.name} klar`, tone: 'good' }
   const d = domainOf(e.entity_id)
   const name = nameOf(e.entity_id) || e.name
   if (d === 'lock') {
-    if (e.state === 'unlocked') return { when: e.when, icon: '🔓', text: `${name} låstes upp`, tone: 'warn' }
-    if (e.state === 'locked') return { when: e.when, icon: '🔒', text: `${name} låstes`, tone: 'info' }
-    if (e.state === 'jammed') return { when: e.when, icon: '⚠️', text: `${name} har fastnat`, tone: 'warn' }
+    if (e.state === 'unlocked') return { when: e.when, icon: LockOpen, text: `${name} låstes upp`, tone: 'warn' }
+    if (e.state === 'locked') return { when: e.when, icon: Lock, text: `${name} låstes`, tone: 'info' }
+    if (e.state === 'jammed') return { when: e.when, icon: TriangleAlert, text: `${name} har fastnat`, tone: 'warn' }
   }
   if (d === 'alarm_control_panel') {
     const t: Record<string, string> = { armed_away: 'Larmet på (borta)', armed_home: 'Larmet på (hemma)', armed_night: 'Larmet på (natt)', disarmed: 'Larmet av', triggered: 'LARMET GICK' }
-    if (t[e.state]) return { when: e.when, icon: e.state === 'triggered' ? '🚨' : '🛡️', text: t[e.state], tone: e.state === 'triggered' ? 'warn' : 'info' }
+    if (t[e.state]) return { when: e.when, icon: e.state === 'triggered' ? ShieldAlert : ShieldCheck, text: t[e.state], tone: e.state === 'triggered' ? 'warn' : 'info' }
   }
-  if (d === 'binary_sensor' && e.state === 'on') return { when: e.when, icon: '🚪', text: `${name} öppnades`, tone: 'info' }
+  if (d === 'binary_sensor' && e.state === 'on') return { when: e.when, icon: DoorOpen, text: `${name} öppnades`, tone: 'info' }
   return null
 }
 
@@ -89,7 +91,7 @@ export function Events() {
   let last = ''
   return (
     <div className="stack">
-      <section className="card">
+      <section className="card events-card">
         <ul className="events">
           {rows.map((r, i) => {
             const day = dayLabel(r.when)
@@ -100,7 +102,7 @@ export function Events() {
                 {head && <div className="event-day">{day}</div>}
                 <div className={`event ${r.tone}`}>
                   <span className="event-time">{hhmm(r.when)}</span>
-                  <span aria-hidden>{r.icon}</span>
+                  <r.icon size={17} strokeWidth={1.8} aria-hidden />
                   <span>{r.text}</span>
                 </div>
               </li>

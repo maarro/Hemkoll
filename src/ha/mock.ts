@@ -18,6 +18,22 @@ function ent(entity_id: string, state: string, attributes: Record<string, unknow
 
 const W = { unit_of_measurement: 'W', device_class: 'power', state_class: 'measurement' }
 
+// Påhittade kamerabilder för demot (SVG), så att kamerarutorna har något att visa.
+const svg = (body: string) => 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180">${body}</svg>`)
+const DEMO_CAM_ENTRE = svg(
+  '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d2b3a"/><stop offset="1" stop-color="#0d141c"/></linearGradient></defs>' +
+    '<rect width="320" height="180" fill="url(#g)"/><rect x="0" y="120" width="320" height="60" fill="#18232f"/>' +
+    '<rect x="128" y="40" width="64" height="100" rx="3" fill="#263a4d"/><circle cx="182" cy="92" r="3" fill="#f5b748"/>' +
+    '<rect x="40" y="56" width="52" height="40" fill="#f5b748" opacity=".55"/><rect x="230" y="56" width="52" height="40" fill="#f5b748" opacity=".35"/>' +
+    '<path d="M0 150 L320 132 L320 180 L0 180Z" fill="#101922"/><text x="8" y="14" font-family="sans-serif" font-size="9" fill="#9fb0c3">ENTRÉ</text>',
+)
+const DEMO_CAM_PRINTER = svg(
+  '<rect width="320" height="180" fill="#11181f"/><rect x="60" y="120" width="200" height="14" fill="#2b3946"/>' +
+    '<rect x="120" y="70" width="80" height="50" fill="#e9eef3" opacity=".85"/><rect x="120" y="58" width="80" height="12" fill="#e9eef3" opacity=".45"/>' +
+    '<rect x="146" y="20" width="28" height="24" fill="#3a4b5c"/><rect x="157" y="44" width="6" height="12" fill="#f5b748"/>' +
+    '<text x="8" y="14" font-family="sans-serif" font-size="9" fill="#9fb0c3">P1S</text>',
+)
+
 export function initialMockEntities(): HassEntities {
   const list: HassEntity[] = [
     // Tibber + Pulse
@@ -91,8 +107,38 @@ export function initialMockEntities(): HassEntities {
     ent('media_player.google_home_kok', 'idle', { friendly_name: 'Google Home Kök', volume_level: 0.4 }),
     ent('media_player.playstation_5', 'on', { friendly_name: 'PlayStation 5', media_title: 'EA Sports FC 26', app_name: 'Spelar' }),
 
-    // Lås
+    // Lås och larm
     ent('lock.ytterdorr', 'unlocked', { friendly_name: 'Ytterdörren' }),
+    ent('alarm_control_panel.hemlarm', 'disarmed', { friendly_name: 'Hemlarm', code_format: 'number', code_arm_required: false }),
+
+    // Väder och personer
+    ent('weather.forecast_hem', 'cloudy', { friendly_name: 'Hem', temperature: 2.4, temperature_unit: '°C' }),
+    ent('person.marcus', 'home', { friendly_name: 'Marcus' }),
+
+    // Klimat per rum
+    ent('sensor.vardagsrum_temperatur', '21.4', { device_class: 'temperature', unit_of_measurement: '°C', friendly_name: 'Vardagsrum temperatur' }),
+    ent('sensor.sovrum_temperatur', '19.2', { device_class: 'temperature', unit_of_measurement: '°C', friendly_name: 'Sovrum temperatur' }),
+    ent('sensor.kontor_temperatur', '22.0', { device_class: 'temperature', unit_of_measurement: '°C', friendly_name: 'Kontor temperatur' }),
+
+    // Badrumsfläkt Fresh Intellivent SKY
+    ent('sensor.intellivent_sky_humidity', '72', { device_class: 'humidity', unit_of_measurement: '%', friendly_name: 'Badrum luftfuktighet' }),
+    ent('sensor.intellivent_sky_temperature', '23.1', { device_class: 'temperature', unit_of_measurement: '°C', friendly_name: 'Badrum temperatur' }),
+    ent('fan.intellivent_sky', 'on', { friendly_name: 'Badrumsfläkt', percentage: 60 }),
+    ent('switch.intellivent_sky_airing', 'off', { friendly_name: 'Vädring' }),
+
+    // Bambu Lab (ha-bambulab)
+    ent('sensor.p1s_print_status', 'running', { friendly_name: 'P1S status' }),
+    ent('sensor.p1s_print_progress', '64', { unit_of_measurement: '%', friendly_name: 'P1S progress' }),
+    ent('sensor.p1s_remaining_time', '47', { unit_of_measurement: 'min', friendly_name: 'P1S tid kvar' }),
+    ent('sensor.p1s_task_name', 'Innebandyklubba-hållare v3', { friendly_name: 'P1S utskrift' }),
+    ent('sensor.p1s_nozzle_temperature', '220', { unit_of_measurement: '°C', friendly_name: 'P1S munstycke' }),
+    ent('sensor.p1s_bed_temperature', '65', { unit_of_measurement: '°C', friendly_name: 'P1S bädd' }),
+    ent('switch.bambu', 'on', { friendly_name: 'Bambu-skrivare' }),
+    ent('sensor.bambu_power', '142', { ...W, friendly_name: 'Bambu-skrivare' }),
+
+    // Kameror
+    ent('camera.entre', 'idle', { friendly_name: 'Entré', entity_picture: DEMO_CAM_ENTRE }),
+    ent('camera.p1s_camera', 'idle', { friendly_name: 'Skrivarkamera', entity_picture: DEMO_CAM_PRINTER }),
 
     // Datorer (Wake-on-LAN)
     ent('switch.dator_kontor', 'on', { friendly_name: 'Dator kontor' }),
@@ -145,6 +191,8 @@ export function tick(entities: HassEntities): HassEntities {
     .map((id) => Number(next[id]?.state ?? 0))
     .reduce((a, b) => a + b, 0)
   jitter('sensor.power_hemma', 650 + parts, 80)
+  jitter('sensor.bambu_power', sw('switch.bambu') ? 140 : 0, sw('switch.bambu') ? 30 : 0)
+  if (next['switch.intellivent_sky_airing']?.state === 'on') jitter('sensor.intellivent_sky_humidity', 55, 2)
   next['sensor.electricity_price_hemma'] = {
     ...next['sensor.electricity_price_hemma'],
     state: String(currentMockPrice()),
@@ -171,6 +219,12 @@ export function mockService(
     if (service === 'turn_off') state = 'off'
     if (domain === 'lock' && service === 'lock') state = 'locked'
     if (domain === 'lock' && service === 'unlock') state = 'unlocked'
+    if (domain === 'alarm_control_panel') {
+      if (service === 'alarm_disarm') state = data.code === '1234' ? 'disarmed' : e.state
+      if (service === 'alarm_arm_away') state = 'armed_away'
+      if (service === 'alarm_arm_home') state = 'armed_home'
+      if (service === 'alarm_arm_night') state = 'armed_night'
+    }
     if (service === 'toggle') state = e.state === 'off' ? 'on' : 'off'
     if (service === 'media_play_pause') state = e.state === 'playing' ? 'paused' : 'playing'
     if (service === 'volume_set') attributes.volume_level = data.volume_level
@@ -216,6 +270,7 @@ export const mockAreas: Area[] = [
   { id: 'kontor', name: 'Kontor', icon: '💻' },
   { id: 'tvattstuga', name: 'Tvättstuga', icon: '🧺' },
   { id: 'hall', name: 'Hall', icon: '🚪' },
+  { id: 'badrum', name: 'Badrum', icon: '🛁' },
 ]
 
 export const mockAreaOf: Record<string, string> = {
@@ -235,6 +290,18 @@ export const mockAreaOf: Record<string, string> = {
   'sensor.torktumlare_power': 'tvattstuga',
   'switch.ikea_hall': 'hall',
   'lock.ytterdorr': 'hall',
+  'alarm_control_panel.hemlarm': 'hall',
+  'camera.entre': 'hall',
+  'sensor.vardagsrum_temperatur': 'vardagsrum',
+  'sensor.sovrum_temperatur': 'sovrum',
+  'sensor.kontor_temperatur': 'kontor',
+  'switch.bambu': 'kontor',
+  'sensor.bambu_power': 'kontor',
+  'camera.p1s_camera': 'kontor',
+  'fan.intellivent_sky': 'badrum',
+  'switch.intellivent_sky_airing': 'badrum',
+  'sensor.intellivent_sky_humidity': 'badrum',
+  'sensor.intellivent_sky_temperature': 'badrum',
 }
 
 /** Påhittad logbok för senaste dygnet. */
@@ -253,4 +320,27 @@ export function mockLogbook(start: Date): LogEvent[] {
     { when: ago(900), entity_id: 'lock.ytterdorr', state: 'locked', name: 'Ytterdörren' },
   ]
   return list.filter((e) => e.when >= start.getTime())
+}
+
+/** Effekt senaste timmen, en punkt per minut. */
+export function mockPowerHistory(minutes: number): [number, number][] {
+  const now = Date.now()
+  const out: [number, number][] = []
+  for (let i = minutes; i >= 0; i--) {
+    const t = now - i * 60_000
+    const washing = i < 38 ? 1900 + Math.sin(i / 2) * 250 : 0
+    const kettle = i > 44 && i < 48 ? 2100 : 0
+    out.push([t, Math.round(620 + Math.sin(i / 6) * 90 + washing + kettle + Math.random() * 60)])
+  }
+  return out
+}
+
+/** Kostnad per dag (kr) de senaste dagarna, idag sist. */
+export function mockDailyCost(days: number): { day: number; cost: number }[] {
+  const out: { day: number; cost: number }[] = []
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const base = [38.2, 42.9, 35.1, 51.7, 46.4, 33.8, 18.4, 29.5, 44.1, 39.9]
+  for (let i = days - 1; i >= 0; i--) out.push({ day: today.getTime() - i * 86_400_000, cost: i === 0 ? 18.4 : base[i % base.length] })
+  return out
 }

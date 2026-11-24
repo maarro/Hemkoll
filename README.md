@@ -35,6 +35,25 @@ npm run build
 Öppna `http://homeassistant.local/local/hemkoll/index.html` (nyare installationer kör på port 80; äldre använder `:8123`` och lägg till på hemskärmen.
 Då behöver du bara klistra in token första gången, och adressen fylls i automatiskt.
 
+## Det som visas automatiskt
+
+Hemkoll letar själv upp det som finns i Home Assistant. Saknas något visas det bara inte.
+
+| Del | Kommer från | Visas på |
+| --- | --- | --- |
+| Husets puls, elpris, kostnad | Tibber + Pulse KM | Hem, Energi |
+| Kostnad per dag, 7 dagar | HA:s statistik för Tibbers kostnadssensor | Energi |
+| Väder | Väderintegrationen (Met.no följer med HA) | Hem |
+| Vem är hemma | Personer + Home Assistant-appen i mobilen | Hem |
+| Larm | Verisure, Sector Alarm, Ajax m.fl. (`alarm_control_panel`) | Hem, Rum |
+| Lås | Yale, ID Lock, Nuki m.fl. (`lock`) | Hem, Rum |
+| Bambu Lab | ha-bambulab (via Marknadsplatsen/HACS) | Hem medan den skriver ut |
+| Badrumsfläkt | Fresh Intellivent SKY (communityintegration) | Hem, Rum |
+| Kameror | Reolink, Bambu-kameran m.fl. (`camera`) | Hem, Rum |
+| Temperatur per rum | Temperaturgivare som ligger i ett område | Rum |
+
+Namn som inte hittas automatiskt kan sättas i `src/config.ts` (`bambu`, `bathroom`, `appliances`).
+
 ## Flikarna
 
 - **Hem:** effekt och elpris, *Just nu* (olåst dörr, tvätt eller tork klar, dyr eller billig el), fyra scenknappar och dina favoriter.

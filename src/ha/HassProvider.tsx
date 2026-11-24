@@ -7,7 +7,7 @@ import {
   type Connection,
 } from 'home-assistant-js-websocket'
 import type { Area, Hass, HassEntities, LogEvent, PricePoint, Settings, Status } from './types'
-import { initialMockEntities, mockAreaOf, mockAreas, mockLogbook, mockPrices, mockService, tick } from './mock'
+import { initialMockEntities, mockAreaOf, mockAreas, mockDailyCost, mockLogbook, mockPowerHistory, mockPrices, mockService, tick } from './mock'
 
 const Ctx = createContext<Hass | null>(null)
 
@@ -137,6 +137,46 @@ export function HassProvider({ settings, children }: { settings: Settings; child
     [settings.demo],
   )
 
+  const getHistory = useCallback(
+    async (entityId: string, minutes: number): Promise<[number, number][]> => {
+      if (settings.demo) return mockPowerHistory(minutes)
+      if (!conn.current || !entityId) return []
+      const res = await conn.current.sendMessagePromise<Record<string, { s: string; lu: number }[]>>({
+        type: 'history/history_during_period',
+        start_time: new Date(Date.now() - minutes * 60_000).toISOString(),
+        entity_ids: [entityId],
+        minimal_response: true,
+        no_attributes: true,
+        significant_changes_only: false,
+      })
+      return (res[entityId] ?? [])
+        .map((r) => [r.lu * 1000, Number(r.s)] as [number, number])
+        .filter(([, v]) => Number.isFinite(v))
+    },
+    [settings.demo],
+  )
+
+  const getDaily = useCallback(
+    async (statisticId: string, days: number) => {
+      if (settings.demo) return mockDailyCost(days)
+      if (!conn.current || !statisticId) return []
+      const start = new Date()
+      start.setHours(0, 0, 0, 0)
+      start.setDate(start.getDate() - (days - 1))
+      const res = await conn.current.sendMessagePromise<Record<string, { start: number; max: number | null }[]>>({
+        type: 'recorder/statistics_during_period',
+        start_time: start.toISOString(),
+        statistic_ids: [statisticId],
+        period: 'day',
+        types: ['max'],
+      })
+      return (res[statisticId] ?? [])
+        .filter((r) => r.max != null)
+        .map((r) => ({ day: typeof r.start === 'number' ? r.start : new Date(r.start).getTime(), cost: r.max as number }))
+    },
+    [settings.demo],
+  )
+
   return (
     <Ctx.Provider
       value={{
@@ -146,6 +186,8 @@ export function HassProvider({ settings, children }: { settings: Settings; child
         callService,
         getPrices,
         getLogbook,
+        getHistory,
+        getDaily,
         areas,
         areaOf,
         noise,

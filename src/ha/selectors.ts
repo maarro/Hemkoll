@@ -101,3 +101,55 @@ export function groupable(ents: HassEntities, mediaId: string) {
   if (!me || !Array.isArray(me.attributes.group_members)) return []
   return mediaPlayers(ents).filter((e) => e.entity_id !== mediaId && Array.isArray(e.attributes.group_members))
 }
+
+const byId = (ents: HassEntities, re: RegExp, domain?: string, test?: (e: HassEntity) => boolean) =>
+  Object.values(ents).find((e) => re.test(e.entity_id) && (!domain || domainOf(e.entity_id) === domain) && (!test || test(e)))
+
+/** Skrivaren från ha-bambulab, eller undefined om ingen finns. */
+export function bambu(ents: HassEntities) {
+  const prog = config.bambu.prefix
+    ? ents[`sensor.${config.bambu.prefix}_print_progress`]
+    : byId(ents, /^sensor\..+_print_progress$/)
+  if (!prog) return undefined
+  const p = objectId(prog.entity_id).replace(/_print_progress$/, '')
+  const s = (k: string) => ents[`sensor.${p}_${k}`]
+  return {
+    progress: num(prog),
+    status: s('print_status')?.state ?? s('current_stage')?.state,
+    remaining: num(s('remaining_time')),
+    task: s('task_name')?.state,
+    nozzle: num(s('nozzle_temperature')),
+    bed: num(s('bed_temperature')),
+    camera: ents[`camera.${p}_camera`] ?? ents[`image.${p}_cover_image`],
+    plug: ents[config.bambu.plug],
+    power: num(ents[config.bambu.power]),
+  }
+}
+
+/** Badrumsfläkten (Fresh Intellivent SKY). */
+export function bathroom(ents: HassEntities) {
+  const c = config.bathroom
+  const re = /intellivent|_sky_|fresh_sky/i
+  const humidity = c.humidity ? ents[c.humidity] : byId(ents, re, 'sensor', (e) => e.attributes.device_class === 'humidity')
+  if (!humidity) return undefined
+  return {
+    humidity: num(humidity),
+    temperature: num(c.temperature ? ents[c.temperature] : byId(ents, re, 'sensor', (e) => e.attributes.device_class === 'temperature')),
+    fan: c.fan ? ents[c.fan] : byId(ents, re, 'fan'),
+    airing: c.airing ? ents[c.airing] : byId(ents, /(intellivent|sky).*(airing|boost|vadring)/i),
+  }
+}
+
+export const alarmPanel = (ents: HassEntities) => Object.values(ents).find((e) => domainOf(e.entity_id) === 'alarm_control_panel')
+export const cameras = (ents: HassEntities) => Object.values(ents).filter((e) => domainOf(e.entity_id) === 'camera' && visible(e.entity_id))
+export const persons = (ents: HassEntities) => Object.values(ents).filter((e) => domainOf(e.entity_id) === 'person')
+export const weather = (ents: HassEntities) => Object.values(ents).find((e) => domainOf(e.entity_id) === 'weather')
+
+/** Medeltemperatur i ett rum, från temperaturgivare som ligger där. */
+export function roomTemperature(ents: HassEntities, areaOf: Record<string, string>, areaId: string) {
+  const vals = Object.values(ents)
+    .filter((e) => areaOf[e.entity_id] === areaId && e.attributes.device_class === 'temperature' && domainOf(e.entity_id) === 'sensor')
+    .map((e) => num(e))
+    .filter((v): v is number => v !== undefined)
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : undefined
+}

@@ -98,6 +98,15 @@ export const config = {
     },
   ] as SceneDef[],
 
+  /**
+   * Bambu Lab (integrationen ha-bambulab). Tom = hitta skrivaren automatiskt
+   * (sensorn som slutar på _print_progress). plug/power = Shelly-uttaget skrivaren sitter i.
+   */
+  bambu: { prefix: '', plug: 'switch.bambu', power: 'sensor.bambu_power' },
+
+  /** Badrumsfläkt (Fresh Intellivent SKY). Tomma = hittas automatiskt på namnet. */
+  bathroom: { humidity: '', temperature: '', fan: '', airing: '' },
+
   /** Entiteter som aldrig ska visas (t.ex. kylskåpets uttag). */
   hidden: [] as string[],
 

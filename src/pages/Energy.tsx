@@ -2,7 +2,9 @@ import { config } from '../config'
 import { useHass } from '../ha/HassProvider'
 import { consumers, nameOf, num, tibber } from '../ha/selectors'
 import { PriceChart } from '../components/PriceChart'
+import { CostHistory } from '../components/CostHistory'
 import { watts } from '../components/Tiles'
+import { applianceIcon } from '../ui/icons'
 
 /** Energi: effekt, kostnad, elpris och vad som drar mest. */
 export function Energy() {
@@ -19,52 +21,52 @@ export function Energy() {
 
   return (
     <div className="stack">
-      <section className="card hero">
-        <div className="hero-grid">
-          <div>
-            <div className="muted small">Huset drar just nu</div>
-            <div className="huge">{watts(power)}</div>
-            <div className="muted small">
-              {costPerHour !== undefined
-                ? `≈ ${costPerHour.toLocaleString('sv-SE', { maximumFractionDigits: 2 })} kr/timme`
-                : 'Koppla in Tibber Pulse för realtid'}
-            </div>
-          </div>
-          <div className="hero-side">
-            <div>
-              <div className="muted small">Idag</div>
-              <div className="mid">
-                {num(t.cost)?.toLocaleString('sv-SE', { maximumFractionDigits: 1 }) ?? '–'} <span className="unit">kr</span>
-              </div>
-            </div>
-            <div>
-              <div className="muted small">Förbrukat</div>
-              <div className="mid">
-                {num(t.consumption)?.toLocaleString('sv-SE', { maximumFractionDigits: 1 }) ?? '–'} <span className="unit">kWh</span>
-              </div>
-            </div>
+      <section className="card energy-hero">
+        <div>
+          <div className="muted">Huset drar just nu</div>
+          <div className="huge">{watts(power)}</div>
+          <div className="muted">
+            {costPerHour !== undefined
+              ? `Det motsvarar ${costPerHour.toLocaleString('sv-SE', { maximumFractionDigits: 2 })} kr i timmen`
+              : 'Koppla in Tibber Pulse för att se effekten i realtid'}
           </div>
         </div>
+        <dl className="facts">
+          <div>
+            <dt>Kostnad idag</dt>
+            <dd>
+              {num(t.cost)?.toLocaleString('sv-SE', { maximumFractionDigits: 1 }) ?? '–'} <span className="unit">kr</span>
+            </dd>
+          </div>
+          <div>
+            <dt>Förbrukat idag</dt>
+            <dd>
+              {num(t.consumption)?.toLocaleString('sv-SE', { maximumFractionDigits: 1 }) ?? '–'} <span className="unit">kWh</span>
+            </dd>
+          </div>
+        </dl>
       </section>
 
       {appliances.length > 0 && (
-        <div className="appliances">
+        <div className="status-row">
           {appliances.map((a) => {
             const running = entities[a.running]?.state === 'on'
+            const Icon = applianceIcon(a.name)
             return (
-              <section key={a.power} className={`card washer ${running ? 'running' : ''}`}>
-                <span className="washer-icon" aria-hidden>
-                  {a.icon}
-                </span>
-                <div className="tile-main">
-                  <div className="tile-name">{a.name}</div>
-                  <div className="muted small">{running ? `${a.verb} · ${watts(num(entities[a.power]))}` : 'Klar / ledig'}</div>
-                </div>
-              </section>
+              <div key={a.power} className={`card status ${running ? 'lit' : ''}`}>
+                <Icon size={22} strokeWidth={1.75} aria-hidden />
+                <span className="status-name">{a.name}</span>
+                <span className="status-value">{running ? `${a.verb}, ${watts(num(entities[a.power]))}` : 'Ledig'}</span>
+              </div>
             )
           })}
         </div>
       )}
+
+      <section className="card">
+        <h2>Kostnad per dag</h2>
+        <CostHistory />
+      </section>
 
       <section className="card">
         <h2>Elpris idag</h2>

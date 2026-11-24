@@ -11,14 +11,14 @@ export function SettingsPage({ settings, onSave }: { settings: Settings; onSave:
     <div className="stack">
       <section className="card">
         <h2>Home Assistant</h2>
-        <p className="muted small">
+        <p className="muted">
           Status:{' '}
           <strong>
             {
               {
                 demo: 'Demoläge (låtsasdata)',
                 connecting: 'Ansluter…',
-                connected: `Ansluten · ${Object.keys(entities).length} entiteter`,
+                connected: `Ansluten, ${Object.keys(entities).length} entiteter`,
                 error: 'Fel',
                 unconfigured: 'Inte inställd',
               }[status]
@@ -36,7 +36,7 @@ export function SettingsPage({ settings, onSave }: { settings: Settings; onSave:
             type="password"
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            placeholder="Profil → Säkerhet → Långlivade åtkomsttoken"
+            placeholder="Klistra in token"
           />
         </label>
         <div className="row">
@@ -47,7 +47,7 @@ export function SettingsPage({ settings, onSave }: { settings: Settings; onSave:
             Demoläge
           </button>
         </div>
-        <p className="muted small">Token sparas bara i den här webbläsaren.</p>
+        <p className="muted small">Skapa token i Home Assistant under din profil, fliken Säkerhet. Den sparas bara på den här mobilen.</p>
       </section>
     </div>
   )

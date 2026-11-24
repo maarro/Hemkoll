@@ -1,10 +1,11 @@
+import { CircleCheck, LockOpen, TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { config } from '../config'
 import { useHass } from '../ha/HassProvider'
 import { domainOf, nameOf } from '../ha/selectors'
 import { hhmm, kr, priceStats, usePrices } from '../ha/usePrices'
 
-type Alert = { id: string; tone: 'warn' | 'good' | 'info'; icon: string; text: string; action?: { label: string; run: () => void } }
+type Alert = { id: string; tone: 'warn' | 'good' | 'info'; icon: LucideIcon; text: string; action?: { label: string; run: () => void } }
 
 /** "Just nu": det som är värt att veta utan att leta. Visar inget när allt är lugnt. */
 export function Alerts() {
@@ -42,7 +43,7 @@ export function Alerts() {
     alerts.push({
       id: e.entity_id,
       tone: 'warn',
-      icon: '🔓',
+      icon: LockOpen,
       text: `${nameOf(e)} är olåst${now - since > 60_000 ? ` sedan ${hhmm(since)}` : ''}`,
       action: { label: 'Lås', run: () => callService('lock', 'lock', {}, { entity_id: e.entity_id }) },
     })
@@ -51,7 +52,7 @@ export function Alerts() {
   // Vitvaror som blivit klara senaste två timmarna
   for (const a of config.appliances) {
     const t = done[a.running]
-    if (t && entities[a.running]?.state === 'off') alerts.push({ id: a.running, tone: 'good', icon: a.icon, text: `${a.name} klar ${hhmm(t)}` })
+    if (t && entities[a.running]?.state === 'off') alerts.push({ id: a.running, tone: 'good', icon: CircleCheck, text: `${a.name} klar ${hhmm(t)}` })
   }
 
   // Elpriset
@@ -59,9 +60,9 @@ export function Alerts() {
   if (st?.now !== undefined) {
     const cheapAt = st.best >= 0 ? ` Billigast ${hhmm(prices[st.best].start)}.` : ''
     if (st.now > st.avg * 1.35)
-      alerts.push({ id: 'price', tone: 'warn', icon: '⚡', text: `Dyr el just nu: ${kr(st.now)} kr/kWh.${cheapAt}` })
+      alerts.push({ id: 'price', tone: 'warn', icon: TrendingUp, text: `Dyr el just nu, ${kr(st.now)} kr/kWh.${cheapAt}` })
     else if (st.now < st.avg * 0.7)
-      alerts.push({ id: 'price', tone: 'good', icon: '⚡', text: `Billig el just nu: ${kr(st.now)} kr/kWh – bra läge för disk och tvätt.` })
+      alerts.push({ id: 'price', tone: 'good', icon: TrendingDown, text: `Billig el just nu, ${kr(st.now)} kr/kWh. Bra läge för disk och tvätt.` })
   }
 
   if (!alerts.length) return null
@@ -69,7 +70,7 @@ export function Alerts() {
     <section className="alerts">
       {alerts.map((a) => (
         <div key={a.id} className={`alert ${a.tone}`}>
-          <span aria-hidden>{a.icon}</span>
+          <a.icon size={18} strokeWidth={1.9} aria-hidden />
           <span className="alert-text">{a.text}</span>
           {a.action && (
             <button className="btn small" onClick={a.action.run}>

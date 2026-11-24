@@ -1,30 +1,31 @@
 import { useHass } from '../ha/HassProvider'
-import { computers, mediaKind, mediaPlayers, plugs, domainOf } from '../ha/selectors'
-import { EntityTile } from '../components/EntityTile'
+import { alarmPanel, computers, domainOf, mediaKind, mediaPlayers, plugs } from '../ha/selectors'
+import { TileGrid } from '../components/EntityTile'
+import type { HassEntity } from '../ha/types'
 
-/** Alla enheter sorterade på typ – används när rum saknas eller via "Visa alla enheter". */
+/** Alla enheter sorterade på typ – när rum saknas eller via "Visa alla enheter". */
 export function Devices() {
   const { entities, noise } = useHass()
-  const ok = (id: string) => !noise.has(id)
-  const p = plugs(entities).filter((e) => ok(e.entity_id))
-  const m = mediaPlayers(entities).filter((e) => ok(e.entity_id))
-  const speakers = m.filter((e) => mediaKind(e) === 'speaker')
-  const screens = m.filter((e) => mediaKind(e) !== 'speaker')
-  const c = computers(entities)
-  const locks = Object.values(entities).filter((e) => domainOf(e.entity_id) === 'lock' && ok(e.entity_id))
-  const section = (title: string, list: typeof m, empty: string) => (
-    <section className="card">
-      <h2>{title}</h2>
-      {list.length ? list.map((e) => <EntityTile key={e.entity_id} entity={e} />) : <p className="muted">{empty}</p>}
-    </section>
-  )
+  const ok = (e: HassEntity) => !noise.has(e.entity_id)
+  const m = mediaPlayers(entities).filter(ok)
+  const alarm = alarmPanel(entities)
+  const groups: [string, HassEntity[]][] = [
+    ['Säkerhet', [...(alarm ? [alarm] : []), ...Object.values(entities).filter((e) => domainOf(e.entity_id) === 'lock' && ok(e))]],
+    ['Högtalare', m.filter((e) => mediaKind(e) === 'speaker')],
+    ['TV och spel', m.filter((e) => mediaKind(e) !== 'speaker')],
+    ['Uttag och lampor', [...plugs(entities), ...Object.values(entities).filter((e) => ['light', 'fan'].includes(domainOf(e.entity_id)))].filter(ok)],
+    ['Datorer', computers(entities)],
+  ]
   return (
     <div className="stack">
-      {locks.length > 0 && section('Lås', locks, '')}
-      {section('Högtalare', speakers, 'Inga högtalare hittade.')}
-      {section('TV & spel', screens, 'Inga TV-apparater hittade.')}
-      {section('Uttag', p, 'Inga uttag hittade.')}
-      {section('Datorer', c, 'Lägg till Wake-on-LAN i Home Assistant för att väcka datorerna härifrån.')}
+      {groups
+        .filter(([, list]) => list.length)
+        .map(([title, list]) => (
+          <section key={title}>
+            <h2 className="section-title">{title}</h2>
+            <TileGrid list={list} />
+          </section>
+        ))}
     </div>
   )
 }

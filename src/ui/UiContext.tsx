@@ -2,8 +2,12 @@ import { createContext, useCallback, useContext, useRef, useState, type ReactNod
 
 type Ui = {
   openMedia: (id: string) => void
+  openAlarm: (id: string) => void
+  openCamera: (id: string) => void
   toast: (msg: string) => void
 }
+
+type Sheet = { kind: 'media' | 'alarm' | 'camera'; id: string } | null
 
 const Ctx = createContext<Ui | null>(null)
 
@@ -14,8 +18,14 @@ export function useUi() {
 }
 
 /** Gemensamt för hela appen: kontrollvyn för media och korta bekräftelser. */
-export function UiProvider({ children, renderMedia }: { children: ReactNode; renderMedia: (id: string, close: () => void) => ReactNode }) {
-  const [media, setMedia] = useState<string | null>(null)
+export function UiProvider({
+  children,
+  renderSheet,
+}: {
+  children: ReactNode
+  renderSheet: (kind: 'media' | 'alarm' | 'camera', id: string, close: () => void) => ReactNode
+}) {
+  const [sheet, setSheet] = useState<Sheet>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -26,9 +36,16 @@ export function UiProvider({ children, renderMedia }: { children: ReactNode; ren
   }, [])
 
   return (
-    <Ctx.Provider value={{ openMedia: setMedia, toast }}>
+    <Ctx.Provider
+      value={{
+        openMedia: (id) => setSheet({ kind: 'media', id }),
+        openAlarm: (id) => setSheet({ kind: 'alarm', id }),
+        openCamera: (id) => setSheet({ kind: 'camera', id }),
+        toast,
+      }}
+    >
       {children}
-      {media && renderMedia(media, () => setMedia(null))}
+      {sheet && renderSheet(sheet.kind, sheet.id, () => setSheet(null))}
       {msg && (
         <div className="toast" role="status">
           {msg}

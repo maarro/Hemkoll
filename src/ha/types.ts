@@ -29,6 +29,10 @@ export interface Hass {
   areaOf: Record<string, string>
   /** Entiteter som HA markerat som dolda, inställningar eller diagnostik. */
   noise: Set<string>
+  /** Historik för en sensor: [tid ms, värde]. */
+  getHistory: (entityId: string, minutes: number) => Promise<[number, number][]>
+  /** Dagliga maxvärden från HA:s statistik (t.ex. ackumulerad kostnad per dag). */
+  getDaily: (statisticId: string, days: number) => Promise<{ day: number; cost: number }[]>
   /** Logbok (händelser) sedan start, för valda entiteter. */
   getLogbook: (start: Date, entityIds: string[]) => Promise<LogEvent[]>
   status: Status
