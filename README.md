@@ -109,3 +109,9 @@ homeassistant/packages ← automationer att lägga i HA
 - **Uppdateringar**: syns när Home Assistant har nya versioner.
 - **Lågt batteri** under 20 % och **Internet nere** (Google Wifi).
 - **Energi**: bästa tid att tvätta (`kwh` och `hours` per vitvara i config), standby på natten från Tibbers timstatistik och prognos för månadens kostnad.
+
+## Scener
+Scenknapparna på Hem är dina scener och skript i Home Assistant (Inställningar → Automatiseringar och scener).
+Skapa eller ändra dem där, så dyker de upp i Hemkoll. Ikonen väljs efter namnet (natt, lämna, hemma, film, morgon, middag, musik, fika, spel).
+Vill du dölja en: lägg dess entity_id i `hidden` i config.ts eller dölj entiteten i Home Assistant.
+Exempelscenerna i config.ts används bara i demoläget.

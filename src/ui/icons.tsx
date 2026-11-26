@@ -14,6 +14,9 @@ import {
   Printer,
   ShieldCheck,
   Sparkles,
+  Sun,
+  Utensils,
+  Music,
   Speaker,
   Tv,
   WashingMachine,
@@ -44,6 +47,21 @@ export function iconFor(e: HassEntity, isComputer = false): LucideIcon {
 
 const sceneIcons: Record<string, LucideIcon> = { natt: Moon, borta: DoorOpen, film: Clapperboard, hemma: House }
 export const sceneIcon = (id: string): LucideIcon => sceneIcons[id] ?? Sparkles
+
+/** Ikon för en scen eller ett skript i Home Assistant, utifrån namnet. */
+export function sceneIconByName(name: string): LucideIcon {
+  const n = name.toLowerCase()
+  if (/natt|sov|night/.test(n)) return Moon
+  if (/lämna|borta|away|gå hemifrån/.test(n)) return DoorOpen
+  if (/hemma|kommer hem|home/.test(n)) return House
+  if (/film|bio|tv|movie/.test(n)) return Clapperboard
+  if (/morgon|god morgon|vakna|morning/.test(n)) return Sun
+  if (/middag|mat|lunch|frukost|dinner/.test(n)) return Utensils
+  if (/musik|music|spotify/.test(n)) return Music
+  if (/kaffe|fika/.test(n)) return Coffee
+  if (/spel|game|playstation/.test(n)) return Gamepad2
+  return Sparkles
+}
 
 /** Ikon för en vitvara utifrån namnet. */
 export const applianceIcon = (name: string): LucideIcon => (/tork|dryer/i.test(name) ? Wind : WashingMachine)

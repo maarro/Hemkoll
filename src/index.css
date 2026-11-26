@@ -355,3 +355,7 @@ button.card { width: 100%; text-align: left; }
 .plan-when { color: var(--ice); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .standby-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 4px 0 8px; }
 .standby-row .big { font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; }
+.scenes-empty { display: flex; align-items: center; gap: 14px; color: var(--snow); text-decoration: none; }
+.scenes-empty > svg { color: var(--lamp); flex: none; }
+.scenes-empty > span { display: flex; flex-direction: column; gap: 4px; }
+.scenes { grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); }

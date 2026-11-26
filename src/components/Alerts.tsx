@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { config } from '../config'
 import { useHass } from '../ha/HassProvider'
 import { alarmPanel, domainOf, everyoneAway, forgottenOn, lowBatteries, nameOf, network, updates } from '../ha/selectors'
-import { runScene } from '../ha/scenes'
+import { sceneButtons } from '../ha/scenes'
 import { useUi } from '../ui/UiContext'
 import { hhmm, kr, priceStats, usePrices } from '../ha/usePrices'
 
@@ -11,7 +11,7 @@ type Alert = { id: string; tone: 'warn' | 'good' | 'info'; icon: LucideIcon; tex
 
 /** "Just nu": det som är värt att veta utan att leta. Visar inget när allt är lugnt. */
 export function Alerts() {
-  const { entities, callService, getLogbook, status, baseUrl } = useHass()
+  const { entities, callService, getLogbook, status, baseUrl, noise } = useHass()
   const { openAlarm, toast } = useUi()
   const { prices } = usePrices()
   // Vitvaror som blivit klara: läses från logboken, så att en omstart av HA inte ger falska "klar".
@@ -44,7 +44,7 @@ export function Alerts() {
   const away = everyoneAway(entities)
   const unlocked = Object.values(entities).filter((e) => domainOf(e.entity_id) === 'lock' && e.state === 'unlocked')
   const alarm = alarmPanel(entities)
-  const night = config.scenes.find((s) => s.id === 'natt')
+  const night = sceneButtons(entities, callService, status === 'demo', noise).find((s) => /natt|sov|night/i.test(s.name))
 
   // Kvällsrutin: någon är hemma, det är sent och dörren är olåst eller larmet av
   if (evening && !away && night && (unlocked.length || alarm?.state === 'disarmed')) {
@@ -57,7 +57,7 @@ export function Alerts() {
       icon: Moon,
       text: `Dags för natten? ${what[0].toUpperCase()}${what.slice(1)}.`,
       action: unlocked.length
-        ? { label: night.name, run: () => runScene(night, entities, callService).then(() => toast(`${night.name} klart`)) }
+        ? { label: night.name, run: () => night.run().then(() => toast(`${night.name} klar`)) }
         : alarm
           ? { label: 'Larma', run: () => openAlarm(alarm.entity_id) }
           : undefined,
