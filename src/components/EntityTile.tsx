@@ -86,7 +86,7 @@ export function EntityTile({ entity }: { entity: HassEntity }) {
 
   return (
     <div
-      className={`tile ${lit ? 'lit' : ''} ${warn ? 'warn' : ''} ${armed ? 'armed' : ''} ${wide ? 'wide' : ''} ${unavailable ? 'gone' : ''}`}
+      className={`tile d-${d} ${lit ? 'lit' : ''} ${warn ? 'warn' : ''} ${armed ? 'armed' : ''} ${wide ? 'wide' : ''} ${unavailable ? 'gone' : ''}`}
       role="button"
       tabIndex={0}
       aria-pressed={d === 'media_player' ? undefined : lit}
