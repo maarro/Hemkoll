@@ -6,11 +6,13 @@ import { CostHistory } from '../components/CostHistory'
 import { watts } from '../components/Tiles'
 import { applianceIcon } from '../ui/icons'
 import { LaundryPlanner, Standby, monthForecast } from '../components/EnergyPlus'
+import { MonthInsight, SavingTip, UsageHeatmap, useTibberStats } from '../components/TibberPlus'
 
 /** Energi: effekt, kostnad, elpris och vad som drar mest. */
 export function Energy() {
   const { entities } = useHass()
   const t = tibber(entities)
+  const ts = useTibberStats()
   const power = num(t.power)
   const price = num(t.price)
   const costPerHour = power !== undefined && price !== undefined ? (power / 1000) * price : undefined
@@ -94,6 +96,9 @@ export function Energy() {
         </div>
       )}
 
+      {ts && <MonthInsight s={ts} />}
+      {ts && <SavingTip s={ts} />}
+
       <LaundryPlanner />
 
       <section className="card">
@@ -102,9 +107,11 @@ export function Energy() {
       </section>
 
       <section className="card">
-        <h2>Elpris idag</h2>
+        <h2>Elpris</h2>
         <PriceChart />
       </section>
+
+      {ts && <UsageHeatmap s={ts} />}
 
       <Standby />
 

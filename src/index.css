@@ -442,3 +442,27 @@ button.card { width: 100%; text-align: left; }
 @media (prefers-reduced-transparency: reduce) {
   .card, .tile, .room-card, .alert, .scene, .status-chip, .pulse, .cam, .note, .today, .tabs, .sheet, .toast { backdrop-filter: none; -webkit-backdrop-filter: none; background-color: #23232d; }
 }
+
+/* --- Tibber: din månad, tips och veckomönster --- */
+.insights { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.insights li { display: flex; gap: 12px; align-items: flex-start; padding: 11px 0; border-bottom: 0.5px solid var(--sep); }
+.insights li:first-child { padding-top: 0; }
+.insights li:last-child { border-bottom: 0; padding-bottom: 0; }
+.ins-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ins-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-weight: 500; }
+.ins-head strong { font-family: ui-rounded, 'SF Pro Rounded', -apple-system, system-ui, sans-serif; font-size: 1.1rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tip-card { display: flex; gap: 12px; align-items: flex-start; background: linear-gradient(160deg, rgba(255, 214, 10, 0.14), rgba(255, 214, 10, 0.03) 60%), var(--glass); }
+.tip-card strong { display: block; margin-bottom: 4px; font-size: 0.98rem; }
+.tip-card p { line-height: 1.45; }
+.heat-read { margin: -6px 0 12px; }
+.heat-strong { color: var(--label); }
+.heat { display: flex; flex-direction: column; gap: 3px; }
+.heat-row { display: grid; grid-template-columns: 34px repeat(24, 1fr); gap: 2px; align-items: center; }
+.heat-day { font-size: 0.72rem; color: var(--label-2); }
+.heat-row.is-today .heat-day { color: var(--label); font-weight: 700; }
+.heat-cell { height: 18px; border-radius: 4px; background: var(--teal); padding: 0; }
+.heat-cell.sel { outline: 2px solid #fff; outline-offset: 0; }
+.heat-axis span { font-size: 0.62rem; color: var(--label-3); overflow: visible; white-space: nowrap; }
+.segmented { display: flex; padding: 2px; border-radius: 10px; background: rgba(118, 118, 128, 0.24); margin-bottom: 14px; }
+.segmented button { flex: 1; padding: 6px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: var(--label); transition: background 0.2s; }
+.segmented button.sel { background: rgba(255, 255, 255, 0.24); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); }

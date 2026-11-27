@@ -1,6 +1,6 @@
 // Demoläge: låtsas-Home Assistant med dina prylar, så att appen går att
 // utveckla och visa innan hårdvaran är på plats.
-import type { Area, CalEvent, HassEntities, HassEntity, LogEvent, PricePoint } from './types'
+import type { Area, CalEvent, Usage, HassEntities, HassEntity, LogEvent, PricePoint } from './types'
 
 const now = () => new Date().toISOString()
 
@@ -198,6 +198,45 @@ export function mockHourly(hours: number): { t: number; kwh: number }[] {
     out.push({ t, kwh: +(base + ((i * 7919) % 10) / 100).toFixed(2) })
   }
   return out
+}
+
+/** Demopris för en viss timme: dyrt morgon och kväll, billigt på natten. */
+const demoPrice = (t: number) => {
+  const d = new Date(t)
+  const h = d.getHours()
+  const day = Math.floor(t / 86400_000)
+  const base = 0.55 + ((day * 37) % 9) / 20
+  const shape = h < 5 ? 0.35 : h < 7 ? 0.8 : h < 10 ? 1.7 : h < 16 ? 0.9 : h < 20 ? 1.9 : 0.8
+  return +(base * shape).toFixed(3)
+}
+
+/** Förbrukning och kostnad per timme eller dag sedan start. */
+export function mockUsage(start: Date, period: 'hour' | 'day'): Usage[] {
+  const hours: Usage[] = []
+  const end = new Date()
+  end.setMinutes(0, 0, 0)
+  for (let t = new Date(start).setMinutes(0, 0, 0); t < end.getTime(); t += 3600_000) {
+    const d = new Date(t)
+    const h = d.getHours()
+    const weekend = d.getDay() === 0 || d.getDay() === 6
+    let kwh = h >= 1 && h < 6 ? 0.34 : h >= 17 && h < 21 ? 1.7 : h >= 6 && h < 9 ? (weekend ? 0.9 : 1.3) : weekend && h >= 10 && h < 15 ? 1.4 : 0.75
+    kwh += ((t / 3600_000) * 7919) % 10 / 40
+    // Tvätt två kvällar i veckan
+    if ((d.getDay() === 2 || d.getDay() === 5) && (h === 18 || h === 19)) kwh += 1.6
+    hours.push({ t, kwh: +kwh.toFixed(2), cost: +(kwh * demoPrice(t)).toFixed(2) })
+  }
+  if (period === 'hour') return hours
+  const days = new Map<number, Usage>()
+  for (const u of hours) {
+    const d = new Date(u.t)
+    d.setHours(0, 0, 0, 0)
+    const k = d.getTime()
+    const cur = days.get(k) ?? { t: k, kwh: 0, cost: 0 }
+    cur.kwh += u.kwh
+    cur.cost = (cur.cost ?? 0) + (u.cost ?? 0)
+    days.set(k, cur)
+  }
+  return [...days.values()]
 }
 
 export function mockPrices(): PricePoint[] {

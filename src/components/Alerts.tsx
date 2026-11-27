@@ -1,8 +1,8 @@
-import { BatteryLow, CircleCheck, Download, House, LockOpen, Moon, ShieldOff, WifiOff, TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react'
+import { BatteryLow, CalendarClock, Mountain, CircleCheck, Download, House, LockOpen, Moon, ShieldOff, WifiOff, TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { config } from '../config'
 import { useHass } from '../ha/HassProvider'
-import { alarmPanel, domainOf, everyoneAway, forgottenOn, lowBatteries, nameOf, network, updates } from '../ha/selectors'
+import { alarmPanel, num, tibber, domainOf, everyoneAway, forgottenOn, lowBatteries, nameOf, network, updates } from '../ha/selectors'
 import { sceneButtons } from '../ha/scenes'
 import { useUi } from '../ui/UiContext'
 import { hhmm, kr, priceStats, usePrices } from '../ha/usePrices'
@@ -13,7 +13,7 @@ type Alert = { id: string; tone: 'warn' | 'good' | 'info'; icon: LucideIcon; tex
 export function Alerts() {
   const { entities, callService, getLogbook, status, baseUrl, noise } = useHass()
   const { openAlarm, toast } = useUi()
-  const { prices } = usePrices()
+  const { prices, ahead } = usePrices()
   // Vitvaror som blivit klara: läses från logboken, så att en omstart av HA inte ger falska "klar".
   const [done, setDone] = useState<Record<string, number>>({})
   const runIds = config.appliances.map((a) => a.running).join(',')
@@ -137,6 +137,31 @@ export function Alerts() {
     else if (st.now < st.avg * 0.7)
       alerts.push({ id: 'price', tone: 'good', icon: TrendingDown, text: `Billig el just nu, ${kr(st.now)} kr/kWh. Bra läge för disk och tvätt.` })
   }
+
+  // Morgondagens priser jämfört med idag (kommer vid lunch)
+  const tmr = new Date()
+  tmr.setDate(tmr.getDate() + 1)
+  const tomorrow = ahead.filter((p) => new Date(p.start).toDateString() === tmr.toDateString())
+  if (st && tomorrow.length >= 20 && new Date().getHours() >= 13) {
+    const tAvg = tomorrow.reduce((s, p) => s + p.price, 0) / tomorrow.length
+    const rel = (tAvg - st.avg) / st.avg
+    if (rel > 0.3)
+      alerts.push({ id: 'tomorrow', tone: 'info', icon: CalendarClock, text: `I morgon blir elen ${Math.round(rel * 100)} % dyrare, ${kr(tAvg)} kr/kWh i snitt. Kör gärna tvätt och disk i kväll eller i natt.` })
+    else if (rel < -0.3)
+      alerts.push({ id: 'tomorrow', tone: 'info', icon: CalendarClock, text: `I morgon blir elen ${Math.round(-rel * 100)} % billigare, ${kr(tAvg)} kr/kWh i snitt. Vänta gärna med tvätten.` })
+  }
+
+  // Nära månadens topptimme (kräver Pulse för effekt i realtid)
+  const tb = tibber(entities)
+  const kw = num(tb.power)
+  const peak = num(tb.peak)
+  if (kw !== undefined && peak !== undefined && peak > 0.5 && kw / 1000 >= peak * 0.9)
+    alerts.push({
+      id: 'peak',
+      tone: 'warn',
+      icon: Mountain,
+      text: `Huset drar ${(kw / 1000).toLocaleString('sv-SE', { maximumFractionDigits: 1 })} kW. Fortsätter det hela timmen blir det månadens nya topptimme (nu ${peak.toLocaleString('sv-SE', { maximumFractionDigits: 1 })} kWh).`,
+    })
 
   if (!alerts.length) return null
   return (

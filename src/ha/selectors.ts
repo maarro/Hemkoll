@@ -37,6 +37,8 @@ export function tibber(ents: HassEntities) {
     cost: config.costToday ? ents[config.costToday] : match(/accumulated_cost|ackumulerad[_ ]kostnad/i),
     consumption: config.consumptionToday ? ents[config.consumptionToday] : match(/accumulated_consumption|ackumulerad[_ ]förbrukning|ackumulerad_forbrukning/i),
     monthCost: match(/monthly_cost|månadskostnad|manadskostnad/i),
+    peak: match(/peak_hour(?!_time)|monthly_peak|topptimme|toppeffekt|max_hour_consumption|maxtimme/i, (e) => !/time|tid/i.test(e.entity_id)),
+    peakTime: match(/time_of_max|peak_hour_time|tid.*(max|topp)|tidpunkt/i),
     monthConsumption: match(/monthly_net_consumption|månatlig[_ ]nettoförbrukning|manatlig_nettoforbrukning/i),
   }
 }

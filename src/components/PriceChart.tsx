@@ -6,9 +6,17 @@ const hhmm = (iso: string) => new Date(iso).toLocaleTimeString('sv-SE', { hour: 
 
 /** Dagens elpris som stapeldiagram. Nuvarande period markerad, billigaste timmen utpekad. */
 export function PriceChart() {
-  const { prices, failed } = usePrices()
+  const { prices: today, ahead, failed } = usePrices()
   const [hover, setHover] = useState<number | null>(null)
+  const [day, setDay] = useState<'idag' | 'imorgon'>('idag')
+  const tomorrow = useMemo(() => {
+    const t = new Date()
+    t.setDate(t.getDate() + 1)
+    return ahead.filter((p) => new Date(p.start).toDateString() === t.toDateString())
+  }, [ahead])
+  const prices = day === 'imorgon' && tomorrow.length ? tomorrow : today
   const stats = useMemo(() => priceStats(prices, 1), [prices])
+  const isTomorrow = prices === tomorrow
 
   if (failed) return <p className="muted">Kunde inte hämta elpriser. Är Tibber-integrationen installerad i Home Assistant?</p>
   if (!stats) return <p className="muted">Hämtar elpriser…</p>
@@ -18,21 +26,39 @@ export function PriceChart() {
   const pad = { l: 34, r: 4, t: 8, b: 20 }
   const bw = (W - pad.l - pad.r) / prices.length
   const y = (v: number) => pad.t + (H - pad.t - pad.b) * (1 - v / (stats.max * 1.05))
-  const shown = hover ?? stats.nowIdx
+  const shown = hover ?? (stats.nowIdx >= 0 ? stats.nowIdx : stats.best)
   const ticks = [0, stats.max / 2, stats.max].map((v) => Math.round(v * 10) / 10)
 
   return (
     <div className="chart">
+      {tomorrow.length > 0 && (
+        <div className="segmented" role="tablist" aria-label="Välj dag">
+          {(['idag', 'imorgon'] as const).map((d) => (
+            <button
+              key={d}
+              role="tab"
+              aria-selected={day === d}
+              className={day === d ? 'sel' : ''}
+              onClick={() => {
+                setDay(d)
+                setHover(null)
+              }}
+            >
+              {d === 'idag' ? 'Idag' : 'I morgon'}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="chart-head">
         <div>
-          <div className="muted small">{shown === stats.nowIdx ? 'Just nu' : hhmm(prices[shown]?.start)}</div>
+          <div className="muted small">{shown === stats.nowIdx && stats.nowIdx >= 0 ? 'Just nu' : `${isTomorrow ? 'I morgon ' : ''}${hhmm(prices[shown]?.start)}`}</div>
           <div className="big">
             {shown >= 0 ? fmt(prices[shown].price) : '–'} <span className="unit">kr/kWh</span>
           </div>
         </div>
         {stats.best >= 0 && (
           <div className="tip">
-            Billigaste timmen: <strong>{hhmm(prices[stats.best].start)}</strong>
+            {isTomorrow ? 'Billigast i morgon' : 'Billigaste timmen'}: <strong>{hhmm(prices[stats.best].start)}</strong>
             <br />
             <span className="muted small">snitt {fmt(stats.bestAvg)} kr/kWh</span>
           </div>
@@ -42,7 +68,7 @@ export function PriceChart() {
         viewBox={`0 0 ${W} ${H}`}
         className="price-svg"
         role="img"
-        aria-label="Elpris idag"
+        aria-label={isTomorrow ? 'Elpris i morgon' : 'Elpris idag'}
         onMouseLeave={() => setHover(null)}
       >
         {ticks.map((t) => (

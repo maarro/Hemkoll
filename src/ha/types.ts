@@ -29,11 +29,20 @@ export interface CalEvent {
   allDay: boolean
 }
 
+export interface Usage {
+  t: number
+  kwh: number
+  /** Kostnad i kr, saknas om Tibber inte lagt in kostnadsstatistik */
+  cost?: number
+}
+
 export interface Hass {
   /** Kalenderhändelser via calendar.get_events. */
   getEvents: (calendarIds: string[], start: Date, end: Date) => Promise<CalEvent[]>
   /** Förbrukning per timme (kWh) från Tibbers statistik, äldst först. */
   getHourly: (hours: number) => Promise<{ t: number; kwh: number }[]>
+  /** Förbrukning och kostnad per timme eller dag från Tibbers statistik, sedan start. */
+  getUsage: (start: Date, period: 'hour' | 'day') => Promise<Usage[]>
   /** Rum från Home Assistant (area registry). Tom lista om inga rum finns. */
   areas: Area[]
   /** entity_id -> area_id. Entiteter som är dolda eller diagnostik saknas här och i ui:t. */

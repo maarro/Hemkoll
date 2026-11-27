@@ -6,9 +6,9 @@ import {
   subscribeEntities,
   type Connection,
 } from 'home-assistant-js-websocket'
-import type { Area, CalEvent, Hass, HassEntities, LogEvent, PricePoint, Settings, Status } from './types'
+import type { Area, CalEvent, Hass, Usage, HassEntities, LogEvent, PricePoint, Settings, Status } from './types'
 import { kindFromDevice, setKindHints, type MediaKind } from './selectors'
-import { initialMockEntities, mockAreaOf, mockAreas, mockDailyCost, mockEvents, mockHourly, mockLogbook, mockPowerHistory, mockPrices, mockService, tick } from './mock'
+import { initialMockEntities, mockAreaOf, mockAreas, mockDailyCost, mockEvents, mockHourly, mockUsage, mockLogbook, mockPowerHistory, mockPrices, mockService, tick } from './mock'
 
 const Ctx = createContext<Hass | null>(null)
 
@@ -205,6 +205,35 @@ export function HassProvider({ settings, children }: { settings: Settings; child
     [settings.demo],
   )
 
+  /** Förbrukning och kostnad från Tibbers statistik (finns utan Pulse). */
+  const getUsage = useCallback(
+    async (start: Date, period: 'hour' | 'day'): Promise<Usage[]> => {
+      if (settings.demo) return mockUsage(start, period)
+      const c = conn.current
+      if (!c) return []
+      const ids = (
+        await c.sendMessagePromise<{ statistic_id: string }[]>({ type: 'recorder/list_statistic_ids', statistic_type: 'sum' }).catch(() => [])
+      ).map((i) => i.statistic_id)
+      const kwhId = ids.find((i) => i.startsWith('tibber:energy_consumption'))
+      const costId = ids.find((i) => i.startsWith('tibber:energy_totalcost'))
+      if (!kwhId) return []
+      type Row = { start: number | string; change?: number | null }
+      const res = await c.sendMessagePromise<Record<string, Row[]>>({
+        type: 'recorder/statistics_during_period',
+        start_time: start.toISOString(),
+        statistic_ids: costId ? [kwhId, costId] : [kwhId],
+        period,
+        types: ['change'],
+      })
+      const ts = (r: Row) => (typeof r.start === 'number' ? r.start : new Date(r.start).getTime())
+      const costs = new Map((costId ? res[costId] ?? [] : []).map((r) => [ts(r), r.change ?? undefined]))
+      return (res[kwhId] ?? [])
+        .map((r) => ({ t: ts(r), kwh: r.change ?? NaN, cost: costs.get(ts(r)) ?? undefined }))
+        .filter((r) => Number.isFinite(r.kwh))
+    },
+    [settings.demo],
+  )
+
   /**
    * Kostnad per dag. Tibber lägger in egen statistik (tibber:energy_totalcost_<hem>) som
    * finns även utan Pulse – den används i första hand. Annars dagens maxvärde från en
@@ -252,6 +281,7 @@ export function HassProvider({ settings, children }: { settings: Settings; child
         getDaily,
         getEvents,
         getHourly,
+        getUsage,
         areas,
         areaOf,
         noise,
