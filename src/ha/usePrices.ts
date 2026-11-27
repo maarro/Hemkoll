@@ -89,3 +89,19 @@ export function when(ms: number) {
   tomorrow.setDate(tomorrow.getDate() + 1)
   return d.toDateString() === tomorrow.toDateString() ? `i morgon ${hhmm(ms)}` : hhmm(ms)
 }
+
+/**
+ * Prisnivå som i Tibber-appen, jämfört med snittet: mycket billigt under 60 %,
+ * billigt under 90 %, normalt upp till 115 %, dyrt upp till 140 %, därefter mycket dyrt.
+ * Färggrupp: grön för normalt och billigare, gul för dyrt, röd för mycket dyrt.
+ */
+export function priceLevel(price: number, avg: number) {
+  const r = avg > 0 ? price / avg : 1
+  if (r < 0.6) return { name: 'Mycket billigt', tone: 'low' as const }
+  if (r < 0.9) return { name: 'Billigt', tone: 'low' as const }
+  if (r <= 1.15) return { name: 'Normalt', tone: 'low' as const }
+  if (r <= 1.4) return { name: 'Dyrt', tone: 'mid' as const }
+  return { name: 'Mycket dyrt', tone: 'high' as const }
+}
+export type PriceTone = ReturnType<typeof priceLevel>['tone']
+export const TONE_COLOR: Record<PriceTone, string> = { low: '#30d158', mid: '#ffd60a', high: '#ff6b4a' }

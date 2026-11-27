@@ -2,7 +2,8 @@ import { ChevronRight } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useHass } from '../ha/HassProvider'
 import { num, tibber } from '../ha/selectors'
-import { kr, priceStats, usePrices } from '../ha/usePrices'
+import { kr, priceLevel, priceStats, usePrices } from '../ha/usePrices'
+import { PriceLine, dotPos } from './PriceLine'
 
 const MINUTES = 60
 
@@ -39,7 +40,8 @@ export function PowerPulse({ onOpen }: { onOpen: () => void }) {
     setPts((p) => [...p.filter(([t0]) => t0 > now - MINUTES * 60_000), [now, power]])
   }, [power])
 
-  const level = st?.now === undefined ? null : st.now > st.avg * 1.35 ? 'dyrt' : st.now < st.avg * 0.75 ? 'billigt' : 'normalt'
+  const lv = st?.now === undefined ? null : priceLevel(st.now, st.avg)
+  const level = lv?.name.toLowerCase() ?? null
 
   // Utan effektmätare (Pulse) visar kurvan dagens elpris i stället.
   const priceMode = power === undefined && prices.length > 1
@@ -88,7 +90,13 @@ export function PowerPulse({ onOpen }: { onOpen: () => void }) {
         </div>
         <ChevronRight className="pulse-chev" size={20} aria-hidden />
       </div>
-      {path && (
+      {priceMode && st && (
+        <div className="pulse-graph">
+          <PriceLine prices={prices} avg={st.avg} max={st.max} nowIdx={st.nowIdx} W={320} H={84} />
+          {st.nowIdx >= 0 && <span className={`pulse-dot price ${lv?.tone ?? ''}`} style={dotPos(prices, st.nowIdx, st.max, 320, 84)} aria-hidden />}
+        </div>
+      )}
+      {!priceMode && path && (
         <div className="pulse-graph">
           <svg viewBox={`0 0 ${path.W} ${path.H}`} preserveAspectRatio="none" aria-hidden>
             <defs>
@@ -104,7 +112,7 @@ export function PowerPulse({ onOpen }: { onOpen: () => void }) {
         </div>
       )}
       <div className="pulse-foot">
-        <span className={`price-chip ${level ?? ''}`}>
+        <span className={`price-chip tone-${lv?.tone ?? ''}`}>
           {priceMode
             ? st && st.best >= 0
               ? `Billigast ${new Date(prices[st.best].start).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`
