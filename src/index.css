@@ -492,3 +492,16 @@ button.card { width: 100%; text-align: left; }
 .price-legend i.low { background: #30d158; }
 .price-legend i.mid { background: #ffd60a; }
 .price-legend i.high { background: #ff6b4a; }
+
+/* --- Huset på Hem --- */
+.house-hero { margin: -14px -16px -6px; pointer-events: none; }
+.house-hero svg { display: block; width: 100%; height: auto; max-height: 230px; }
+.hh-smoke circle { opacity: 0; animation: smoke 5s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.hh-smoke circle:nth-child(2) { animation-delay: 1.6s; }
+.hh-smoke circle:nth-child(3) { animation-delay: 3.2s; }
+@keyframes smoke { 0% { opacity: 0; transform: translate(0, 14px) scale(0.5); } 25% { opacity: 0.45; } 100% { opacity: 0; transform: translate(6px, -10px) scale(1.4); } }
+.hh-star { animation: twinkle 4s ease-in-out infinite; }
+.hh-star.s1 { animation-delay: 1.3s; }
+.hh-star.s2 { animation-delay: 2.6s; }
+@keyframes twinkle { 50% { opacity: 0.3; } }
+.hh-lit { filter: drop-shadow(0 0 3px rgba(255, 200, 100, 0.9)); }

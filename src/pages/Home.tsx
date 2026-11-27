@@ -6,6 +6,7 @@ import { PowerPulse } from '../components/PowerPulse'
 import { Scenes } from '../components/Scenes'
 import { Today } from '../components/Today'
 import { StatusChips } from '../components/StatusChips'
+import { HouseHero } from '../components/HouseHero'
 import { useFavorites } from '../ui/favorites'
 
 /** Hem: husets puls, det som behöver uppmärksamhet, scener, favoriter och kameror. */
@@ -15,6 +16,7 @@ export function Home({ goEnergy }: { goEnergy: () => void }) {
 
   return (
     <div className="stack">
+      <HouseHero />
       <StatusChips goEnergy={goEnergy} />
       <Today />
       <PowerPulse onOpen={goEnergy} />
