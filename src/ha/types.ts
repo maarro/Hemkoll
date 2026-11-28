@@ -47,6 +47,10 @@ export interface Hass {
   areas: Area[]
   /** entity_id -> area_id. Entiteter som är dolda eller diagnostik saknas här och i ui:t. */
   areaOf: Record<string, string>
+  /** entity_id → enhetens id i HA, för att para ihop effekt och energi från samma uttag */
+  deviceOf: Record<string, string>
+  /** Energi (kWh) per period för valfria energisensorer, från HA:s statistik. Sedan start. */
+  getEnergy: (ids: string[], start: Date, period: '5minute' | 'hour' | 'day') => Promise<Record<string, { t: number; kwh: number }[]>>
   /** Entiteter som HA markerat som dolda, inställningar eller diagnostik. */
   noise: Set<string>
   /** Historik för en sensor: [tid ms, värde]. */

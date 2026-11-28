@@ -505,3 +505,26 @@ button.card { width: 100%; text-align: left; }
 .hh-star.s2 { animation-delay: 2.6s; }
 @keyframes twinkle { 50% { opacity: 0.3; } }
 .hh-lit { filter: drop-shadow(0 0 3px rgba(255, 200, 100, 0.9)); }
+
+/* --- Uttag och apparater --- */
+.meters { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.meters li + li .meter { border-top: 0.5px solid var(--sep); }
+.meter { width: 100%; display: flex; align-items: center; gap: 12px; padding: 11px 0; text-align: left; }
+.meter-icon { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--glass-2); color: var(--label); }
+.meter-icon.on { background: var(--orange); color: #fff; }
+.meter-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.meter-name { font-weight: 600; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meter-sub { color: var(--label-2); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.meter-bar { height: 4px; border-radius: 2px; background: var(--glass-2); overflow: hidden; margin-top: 4px; }
+.meter-bar span { display: block; height: 100%; background: var(--teal); border-radius: 2px; }
+.meter-now { flex: none; min-width: 58px; text-align: right; font-family: ui-rounded, 'SF Pro Rounded', -apple-system, system-ui, sans-serif; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--label-2); }
+.meter-now.on { color: var(--label); }
+.meter-readout { margin-bottom: 8px; min-height: 1.2em; }
+.mbars { display: flex; align-items: flex-end; gap: 3px; height: 130px; }
+.mbar { flex: 1; height: 100%; display: flex; align-items: flex-end; padding: 0; }
+.mbar span { display: block; width: 100%; border-radius: 4px 4px 2px 2px; background: rgba(100, 210, 255, 0.45); transition: background 0.15s; }
+.mbar.sel span, .mbar:hover span { background: var(--teal); }
+.mbar.future span { background: transparent; }
+.mbars.manad { gap: 2px; }
+.mbars-axis { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.7rem; color: var(--label-3); }
+.sheet .facts div { background: var(--glass-2); }

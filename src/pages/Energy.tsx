@@ -1,11 +1,12 @@
 import { config } from '../config'
 import { useHass } from '../ha/HassProvider'
-import { consumers, nameOf, num, tibber } from '../ha/selectors'
+import { num, tibber } from '../ha/selectors'
 import { PriceChart } from '../components/PriceChart'
 import { CostHistory } from '../components/CostHistory'
 import { watts } from '../components/Tiles'
 import { applianceIcon } from '../ui/icons'
 import { LaundryPlanner, Standby, monthForecast } from '../components/EnergyPlus'
+import { Meters } from '../components/Meters'
 import { MonthInsight, SavingTip, UsageHeatmap, useTibberStats } from '../components/TibberPlus'
 
 /** Energi: effekt, kostnad, elpris och vad som drar mest. */
@@ -16,8 +17,6 @@ export function Energy() {
   const power = num(t.power)
   const price = num(t.price)
   const costPerHour = power !== undefined && price !== undefined ? (power / 1000) * price : undefined
-  const top = consumers(entities).filter((c) => c.watts > 0).slice(0, 6)
-  const topMax = Math.max(1, ...top.map((c) => c.watts))
 
   const appliances = config.appliances.filter((a) => entities[a.power])
   const forecast = monthForecast(num(t.monthCost))
@@ -115,21 +114,7 @@ export function Energy() {
 
       <Standby />
 
-      <section className="card">
-        <h2>Drar mest just nu</h2>
-        {top.length === 0 && <p className="muted">Inga uttag med energimätning hittades ännu.</p>}
-        <ul className="consumers">
-          {top.map(({ entity, watts: w }) => (
-            <li key={entity.entity_id}>
-              <span className="c-name">{nameOf(entity)}</span>
-              <span className="c-bar">
-                <span style={{ width: `${(w / topMax) * 100}%` }} />
-              </span>
-              <span className="c-val">{watts(w)}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Meters />
 
     </div>
   )

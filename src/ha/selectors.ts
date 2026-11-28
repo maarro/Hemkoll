@@ -248,3 +248,28 @@ export function wastePickups(ents: HassEntities) {
   }
   return out.sort((a, b) => a.days - b.days)
 }
+
+/**
+ * Uttag och apparater som mäter el: effekt (W) just nu och energisensorn (kWh) från samma enhet.
+ * Paras ihop via enheten i HA, annars via namnet (sensor.x_power ↔ sensor.x_energy).
+ */
+export function meters(ents: HassEntities, deviceOf: Record<string, string>) {
+  const list = Object.values(ents)
+  const energy = list.filter(
+    (e) => domainOf(e.entity_id) === 'sensor' && e.attributes.device_class === 'energy' && /wh$/i.test(String(e.attributes.unit_of_measurement ?? '')),
+  )
+  const main = tibber(ents).power?.entity_id
+  return consumers(ents)
+    .filter(({ entity }) => entity.entity_id !== main)
+    .map(({ entity: p, watts }) => {
+      const dev = deviceOf[p.entity_id]
+      const oid = objectId(p.entity_id).replace(/_(power|effekt|current_consumption|active_power)$/, '')
+      const en =
+        (dev && energy.find((e) => deviceOf[e.entity_id] === dev && !/returned|export/i.test(e.entity_id))) ||
+        energy.find((e) => objectId(e.entity_id).replace(/_(energy|energi|total_energy|energy_total|total)$/, '') === oid)
+      const sw = (dev && list.find((e) => domainOf(e.entity_id) === 'switch' && deviceOf[e.entity_id] === dev)) || ents[`switch.${oid}`]
+      const name = (sw ? nameOf(sw) : nameOf(p)).replace(/\s*(effekt|power|\(.*\))\s*$/i, '').trim()
+      return { id: p.entity_id, name, power: p, watts, energy: en, sw }
+    })
+    .filter((m) => m.energy)
+}

@@ -50,6 +50,9 @@ export function initialMockEntities(): HassEntities {
 
     // Tvättmaskin på Shelly Plug PM
     ent('sensor.tvattmaskin_power', '1980', { ...W, friendly_name: 'Tvättmaskin' }),
+    ...['tvattmaskin', 'torktumlare', 'tv_bank', 'deltaco_vardagsrum', 'kaffebryggare', 'bambu'].map((k) =>
+      ent(`sensor.${k}_energy`, String(40 + k.length * 7.3), { device_class: 'energy', state_class: 'total_increasing', unit_of_measurement: 'kWh', friendly_name: 'Energi' }),
+    ),
     ent('input_boolean.tvatt_pagar', 'on', { friendly_name: 'Tvätt pågår' }),
     ent('sensor.torktumlare_power', '1', { ...W, friendly_name: 'Torktumlare' }),
     ent('input_boolean.tork_pagar', 'off', { friendly_name: 'Tork pågår' }),
@@ -237,6 +240,47 @@ export function mockUsage(start: Date, period: 'hour' | 'day'): Usage[] {
     days.set(k, cur)
   }
   return [...days.values()]
+}
+
+/** Demo: effekt och energi från samma uttag hör till samma enhet. */
+export const mockDeviceOf: Record<string, string> = Object.fromEntries(
+  ['tvattmaskin', 'torktumlare', 'tv_bank', 'deltaco_vardagsrum', 'kaffebryggare', 'bambu'].flatMap((k) => [
+    [`sensor.${k}_power`, `dev_${k}`],
+    [`sensor.${k}_energy`, `dev_${k}`],
+    [`switch.${k}`, `dev_${k}`],
+  ]),
+)
+
+/** Demo: energi per period för uttagen, med rimliga mönster per apparat. */
+export function mockEnergy(ids: string[], start: Date, period: '5minute' | 'hour' | 'day') {
+  const step = period === '5minute' ? 300_000 : period === 'hour' ? 3600_000 : 86400_000
+  const out: Record<string, { t: number; kwh: number }[]> = {}
+  for (const id of ids) {
+    const rows: { t: number; kwh: number }[] = []
+    let t = start.getTime()
+    if (period === 'day') t = new Date(start).setHours(0, 0, 0, 0)
+    for (; t < Date.now(); t += step) {
+      // kWh per timme vid en viss tidpunkt
+      const perHour = (ms: number) => {
+        const d = new Date(ms)
+        const h = d.getHours()
+        const day = d.getDay()
+        if (id.includes('tvattmaskin')) return (day === 2 || day === 5 || day === 6) && (h === 18 || h === 19) ? 0.55 : 0.002
+        if (id.includes('torktumlare')) return (day === 2 || day === 5 || day === 6) && (h === 20 || h === 21) ? 1.2 : 0.002
+        if (id.includes('tv_bank')) return h >= 18 && h < 23 ? 0.095 : 0.006
+        if (id.includes('deltaco')) return h >= 16 && h < 23 ? 0.009 : 0
+        if (id.includes('kaffe')) return h === 7 ? 0.35 : 0.001
+        if (id.includes('bambu')) return h >= 9 && h < 15 && day % 2 === 0 ? 0.14 : 0.004
+        return 0.02
+      }
+      let kwh = 0
+      if (period === 'day') for (let i = 0; i < 24; i++) kwh += perHour(t + i * 3600_000)
+      else kwh = perHour(t) * (step / 3600_000)
+      rows.push({ t, kwh: +kwh.toFixed(4) })
+    }
+    out[id] = rows
+  }
+  return out
 }
 
 export function mockPrices(): PricePoint[] {

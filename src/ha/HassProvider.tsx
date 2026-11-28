@@ -8,7 +8,7 @@ import {
 } from 'home-assistant-js-websocket'
 import type { Area, CalEvent, Hass, Usage, HassEntities, LogEvent, PricePoint, Settings, Status } from './types'
 import { kindFromDevice, setKindHints, type MediaKind } from './selectors'
-import { initialMockEntities, mockAreaOf, mockAreas, mockDailyCost, mockEvents, mockHourly, mockUsage, mockLogbook, mockPowerHistory, mockPrices, mockService, tick } from './mock'
+import { initialMockEntities, mockAreaOf, mockAreas, mockDailyCost, mockDeviceOf, mockEnergy, mockEvents, mockHourly, mockUsage, mockLogbook, mockPowerHistory, mockPrices, mockService, tick } from './mock'
 
 const Ctx = createContext<Hass | null>(null)
 
@@ -25,6 +25,7 @@ export function HassProvider({ settings, children }: { settings: Settings; child
   const conn = useRef<Connection | null>(null)
   const [areas, setAreas] = useState<Area[]>([])
   const [areaOf, setAreaOf] = useState<Record<string, string>>({})
+  const [deviceOf, setDeviceOf] = useState<Record<string, string>>({})
   const [noise, setNoise] = useState<Set<string>>(new Set())
 
   useEffect(() => {
@@ -60,6 +61,7 @@ export function HassProvider({ settings, children }: { settings: Settings; child
             if (cancelled) return
             setAreas(r.areas)
             setAreaOf(r.areaOf)
+            setDeviceOf(r.deviceOf)
             setNoise(r.noise)
           })
           .catch(() => {
@@ -234,6 +236,31 @@ export function HassProvider({ settings, children }: { settings: Settings; child
     [settings.demo],
   )
 
+  /** Energi per period från statistiken för energisensorer (t.ex. Shelly-uttagens "Energi"). */
+  const getEnergy = useCallback(
+    async (ids: string[], start: Date, period: '5minute' | 'hour' | 'day') => {
+      if (settings.demo) return mockEnergy(ids, start, period)
+      const c = conn.current
+      if (!c || !ids.length) return {}
+      type Row = { start: number | string; change?: number | null }
+      const res = await c.sendMessagePromise<Record<string, Row[]>>({
+        type: 'recorder/statistics_during_period',
+        start_time: start.toISOString(),
+        statistic_ids: ids,
+        period,
+        types: ['change'],
+        units: { energy: 'kWh' },
+      })
+      const out: Record<string, { t: number; kwh: number }[]> = {}
+      for (const [id, rows] of Object.entries(res))
+        out[id] = rows
+          .map((r) => ({ t: typeof r.start === 'number' ? r.start : new Date(r.start).getTime(), kwh: r.change ?? 0 }))
+          .filter((r) => Number.isFinite(r.kwh) && r.kwh >= 0)
+      return out
+    },
+    [settings.demo],
+  )
+
   /**
    * Kostnad per dag. Tibber lägger in egen statistik (tibber:energy_totalcost_<hem>) som
    * finns även utan Pulse – den används i första hand. Annars dagens maxvärde från en
@@ -284,6 +311,8 @@ export function HassProvider({ settings, children }: { settings: Settings; child
         getUsage,
         areas,
         areaOf,
+        deviceOf: settings.demo ? mockDeviceOf : deviceOf,
+        getEnergy,
         noise,
         baseUrl: settings.demo ? '' : settings.url.replace(/\/$/, ''),
       }}
@@ -316,6 +345,7 @@ async function loadRegistries(c: Connection) {
     c.sendMessagePromise<RegEntity[]>({ type: 'config/entity_registry/list' }),
   ])
   const deviceArea = new Map(devices.map((d) => [d.id, d.area_id]))
+  const deviceOf: Record<string, string> = {}
   const deviceKind = new Map(devices.map((d) => [d.id, kindFromDevice(d.manufacturer ?? '', d.model ?? '')]))
   const hints: Record<string, MediaKind> = {}
   const areaOf: Record<string, string> = {}
@@ -325,6 +355,7 @@ async function loadRegistries(c: Connection) {
     if (!id) continue
     if (e.entity_category || e.ec != null || e.hidden_by || e.hb) noise.add(id)
     const dev = e.device_id ?? e.di
+    if (dev) deviceOf[id] = dev
     const kind = dev ? deviceKind.get(dev) : undefined
     if (kind && id.startsWith('media_player.')) hints[id] = kind
     const area = e.area_id ?? e.ai ?? (dev ? deviceArea.get(dev) : null)
@@ -332,5 +363,5 @@ async function loadRegistries(c: Connection) {
   }
   const areas = areaList.map((a) => ({ id: a.area_id, name: a.name })).sort((a, b) => a.name.localeCompare(b.name, 'sv'))
   setKindHints(hints)
-  return { areas, areaOf, noise }
+  return { areas, areaOf, noise, deviceOf }
 }

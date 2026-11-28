@@ -1,5 +1,6 @@
 import { Delete, Moon, ShieldCheck, ShieldOff, X, House, DoorOpen } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useHass } from '../ha/HassProvider'
 import { nameOf } from '../ha/selectors'
 import { stateSv } from './Tiles'
@@ -11,7 +12,8 @@ export function Sheet({ title, sub, onClose, actions, children }: { title: strin
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
-  return (
+  // Läggs direkt i <body> så att glasytor (backdrop-filter) runt omkring inte fångar vyn
+  return createPortal(
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet" role="dialog" aria-label={title} onClick={(ev) => ev.stopPropagation()}>
         <div className="sheet-grip" />
@@ -29,7 +31,8 @@ export function Sheet({ title, sub, onClose, actions, children }: { title: strin
         </header>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
